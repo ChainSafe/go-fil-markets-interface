@@ -1,3 +1,3 @@
-module github.com/ChainSafe/go-template
+module github.com/ChainSafe/fil-markets-interface
 
 go 1.13
