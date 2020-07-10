@@ -38,7 +38,5 @@ func Serve() error {
 	}
 
 	srv := &http.Server{Handler: http.DefaultServeMux}
-	srv.Serve(manet.NetListener(lst))
-
-	return nil
+	return srv.Serve(manet.NetListener(lst))
 }

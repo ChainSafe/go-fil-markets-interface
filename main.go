@@ -12,7 +12,9 @@ import (
 
 func main() {
 	flag.Parse()
-	go rpc.Serve()
+	if err := rpc.Serve(); err != nil {
+		log.Fatalf("Error while setting up the server.")
+	}
 
 	_ = storageadapter.ClientNodeAdapter{}
 
@@ -41,10 +43,5 @@ func main() {
 		}
 	}()
 
-	for {
-		select {
-		case <-doneCh:
-			return
-		}
-	}
+	<-doneCh
 }
