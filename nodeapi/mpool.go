@@ -3,15 +3,22 @@
 
 package nodeapi
 
-import "context"
+import (
+	"context"
 
-type MpoolAPI struct {}
+	"github.com/filecoin-project/go-address"
+	"github.com/ipfs/go-cid"
+
+	"github.com/filecoin-project/lotus/chain/types"
+)
+
+type MpoolAPI struct{}
 
 // TODO(arijit): Implement the following to connect to Node and fetch info.
-func (a *MpoolAPI) MpoolPushMessage(ctx context.Context) error {
-	return nil
+func (a *MpoolAPI) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
+	return nil, nil
 }
 
-func (a *MpoolAPI) EnsureAvailable(ctx context.Context) error {
-	return nil
+func (a *MpoolAPI) EnsureAvailable(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error) {
+	return cid.Undef, nil
 }
