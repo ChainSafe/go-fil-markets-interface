@@ -7,8 +7,9 @@ import (
 	"context"
 )
 
-type RpcServer struct {}
+type RpcServer struct{}
 
+// Demo RPC API.
 func (s *RpcServer) GetString(ctx context.Context, token string) (string, error) {
 	return token, nil
 }

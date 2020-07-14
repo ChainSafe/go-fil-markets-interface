@@ -50,7 +50,6 @@ func (n *ClientNodeAdapter) GetChainHead(ctx context.Context) (shared.TipSetToke
 		return nil, 0, err
 	}
 
-	return nil, 0, err
 	return head.Key().Bytes(), head.Height(), nil
 }
 
