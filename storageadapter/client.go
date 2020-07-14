@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/golang/glog"
+
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	"github.com/opentracing/opentracing-go/log"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/lotus/build"
@@ -121,7 +122,7 @@ func (n *ClientNodeAdapter) SignBytes(ctx context.Context, signer address.Addres
 // OnDealSectorCommitted waits for a deal's sector to be sealed and proved, indicating the deal is active
 func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider address.Address, dealID abi.DealID, cb storagemarket.DealSectorCommittedCallback) error {
 	checkFunc := func(ts *types.TipSet) (done bool, more bool, err error) {
-		sd, err := nodeapi.GetStorageDeal(ctx, dealId, ts)
+		sd, err := nodeapi.GetStorageDeal(ctx, dealID, ts)
 
 		if err != nil {
 			// TODO: This may be fine for some errors
@@ -144,20 +145,20 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 		}()
 
 		if msg == nil {
-			log.Errorf("timed out waiting for deal activation... what now?")
+			glog.Errorf("timed out waiting for deal activation... what now?")
 			return false, nil
 		}
 
-		sd, err := nodeapi.GetStorageDeal(ctx, abi.DealID(dealId), ts)
+		sd, err := nodeapi.GetStorageDeal(ctx, abi.DealID(dealID), ts)
 		if err != nil {
 			return false, xerrors.Errorf("failed to look up deal on chain: %w", err)
 		}
 
 		if sd.State.SectorStartEpoch < 1 {
-			return false, xerrors.Errorf("deal wasn't active: deal=%d, parentState=%s, h=%d", dealId, ts.ParentState(), ts.Height())
+			return false, xerrors.Errorf("deal wasn't active: deal=%d, parentState=%s, h=%d", dealID, ts.ParentState(), ts.Height())
 		}
 
-		log.Infof("Storage deal %d activated at epoch %d", dealId, sd.State.SectorStartEpoch)
+		glog.Infof("Storage deal %d activated at epoch %d", dealID, sd.State.SectorStartEpoch)
 
 		cb(nil)
 
@@ -165,7 +166,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 	}
 
 	revert := func(ctx context.Context, ts *types.TipSet) error {
-		log.Warn("deal activation reverted; TODO: actually handle this!")
+		glog.Warningf("deal activation reverted; TODO: actually handle this!")
 		// TODO: Just go back to DealSealing?
 		return nil
 	}
@@ -185,7 +186,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 			}
 
 			for _, did := range params.DealIDs {
-				if did == abi.DealID(dealId) {
+				if did == abi.DealID(dealID) {
 					sectorNumber = params.SectorNumber
 					sectorFound = true
 					return false, nil
