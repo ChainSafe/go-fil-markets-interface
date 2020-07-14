@@ -1,3 +1,8 @@
-/.idea
+.idea/
+.vscode/
+.sublime/
+
 /bin
 /build
+
+fil-markets-interface
