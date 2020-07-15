@@ -15,3 +15,7 @@ type ChainAPI struct{}
 func (a *ChainAPI) ChainHead(context.Context) (*types.TipSet, error) {
 	return nil, nil
 }
+
+func (a *ChainAPI) ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error) {
+	return nil, nil
+}

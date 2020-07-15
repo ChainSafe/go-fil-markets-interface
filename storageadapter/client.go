@@ -7,6 +7,13 @@ import (
 	"bytes"
 	"context"
 
+	cborutil "github.com/filecoin-project/go-cbor-util"
+	samarket "github.com/filecoin-project/specs-actors/actors/builtin/market"
+
+	"github.com/multiformats/go-multiaddr"
+
+	"github.com/filecoin-project/specs-actors/actors/builtin/market"
+
 	"github.com/golang/glog"
 
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
@@ -34,13 +41,224 @@ import (
 // with a StorageProvider
 
 type ClientNodeAdapter struct {
+	cs *nodeapi.ChainStore
+	sm *nodeapi.StateManager
+
 	nodeapi.ChainAPI
 	nodeapi.MpoolAPI
 	nodeapi.StateAPI
 }
 
-func NewStorageCommonImpl() storagemarket.StorageCommon {
+func NewStorageCommonImpl() storagemarket.StorageClientNode {
 	return &ClientNodeAdapter{}
+}
+
+func (n *ClientNodeAdapter) ListClientDeals(ctx context.Context, addr address.Address, encodedTs shared.TipSetToken) ([]storagemarket.StorageDeal, error) {
+	tsk, err := types.TipSetKeyFromBytes(encodedTs)
+	if err != nil {
+		return nil, err
+	}
+
+	allDeals, err := n.StateMarketDeals(ctx, tsk)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []storagemarket.StorageDeal
+
+	for _, deal := range allDeals {
+		storageDeal := utils.FromOnChainDeal(deal.Proposal, deal.State)
+		if storageDeal.Client == addr {
+			out = append(out, storageDeal)
+		}
+	}
+
+	return out, nil
+}
+
+func (n *ClientNodeAdapter) ListStorageProviders(ctx context.Context, encodedTs shared.TipSetToken) ([]*storagemarket.StorageProviderInfo, error) {
+	tsk, err := types.TipSetKeyFromBytes(encodedTs)
+	if err != nil {
+		return nil, err
+	}
+
+	addresses, err := n.StateListMiners(ctx, tsk)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []*storagemarket.StorageProviderInfo
+
+	for _, addr := range addresses {
+		mi, err := n.StateMinerInfo(ctx, addr, tsk)
+		if err != nil {
+			return nil, err
+		}
+
+		multiaddrs := make([]multiaddr.Multiaddr, 0, len(mi.Multiaddrs))
+		for _, a := range mi.Multiaddrs {
+			maddr, err := multiaddr.NewMultiaddrBytes(a)
+			if err != nil {
+				return nil, err
+			}
+			multiaddrs = append(multiaddrs, maddr)
+		}
+		storageProviderInfo := utils.NewStorageProviderInfo(addr, mi.Worker, mi.SectorSize, mi.PeerId, multiaddrs)
+		out = append(out, &storageProviderInfo)
+	}
+
+	return out, nil
+}
+
+// ValidatePublishedDeal validates that the provided deal has appeared on chain and references the same ClientDeal
+// returns the Deal id if there is no error
+func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal storagemarket.ClientDeal) (abi.DealID, error) {
+	glog.Info("DEAL ACCEPTED!")
+
+	pubmsg, err := n.cs.GetMessage(*deal.PublishMessage)
+	if err != nil {
+		return 0, xerrors.Errorf("getting deal pubsish message: %w", err)
+	}
+
+	mi, err := nodeapi.StateMinerInfo(ctx, n.sm, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
+	if err != nil {
+		return 0, xerrors.Errorf("getting miner worker failed: %w", err)
+	}
+
+	fromid, err := n.StateLookupID(ctx, pubmsg.From, types.EmptyTSK)
+	if err != nil {
+		return 0, xerrors.Errorf("failed to resolve from msg ID addr: %w", err)
+	}
+
+	if fromid != mi.Worker {
+		return 0, xerrors.Errorf("deal wasn't published by storage provider: from=%s, provider=%s", pubmsg.From, deal.Proposal.Provider)
+	}
+
+	if pubmsg.To != builtin.StorageMarketActorAddr {
+		return 0, xerrors.Errorf("deal publish message wasn't set to StorageMarket actor (to=%s)", pubmsg.To)
+	}
+
+	if pubmsg.Method != builtin.MethodsMarket.PublishStorageDeals {
+		return 0, xerrors.Errorf("deal publish message called incorrect method (method=%s)", pubmsg.Method)
+	}
+
+	var params samarket.PublishStorageDealsParams
+	if err := params.UnmarshalCBOR(bytes.NewReader(pubmsg.Params)); err != nil {
+		return 0, err
+	}
+
+	dealIdx := -1
+	for i, storageDeal := range params.Deals {
+		// TODO: make it less hacky
+		sd := storageDeal
+		eq, err := cborutil.Equals(&deal.ClientDealProposal, &sd)
+		if err != nil {
+			return 0, err
+		}
+		if eq {
+			dealIdx = i
+			break
+		}
+	}
+
+	if dealIdx == -1 {
+		return 0, xerrors.Errorf("deal publish didn't contain our deal (message cid: %s)", deal.PublishMessage)
+	}
+
+	// TODO: timeout
+	_, ret, err := n.sm.WaitForMessage(ctx, *deal.PublishMessage, build.MessageConfidence)
+	if err != nil {
+		return 0, xerrors.Errorf("waiting for deal publish message: %w", err)
+	}
+	if ret.ExitCode != 0 {
+		return 0, xerrors.Errorf("deal publish failed: exit=%d", ret.ExitCode)
+	}
+
+	var res samarket.PublishStorageDealsReturn
+	if err := res.UnmarshalCBOR(bytes.NewReader(ret.Return)); err != nil {
+		return 0, err
+	}
+
+	return res.IDs[dealIdx], nil
+}
+
+func (n *ClientNodeAdapter) SignProposal(ctx context.Context, signer address.Address, proposal market.DealProposal) (*market.ClientDealProposal, error) {
+	// TODO: output spec signed proposal
+	buf, err := cborutil.Dump(&proposal)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err = n.StateAccountKey(ctx, signer, types.EmptyTSK)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := n.Wallet.Sign(ctx, signer, buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &samarket.ClientDealProposal{
+		Proposal:        proposal,
+		ClientSignature: *sig,
+	}, nil
+}
+
+func (n *ClientNodeAdapter) GetDefaultWalletAddress(ctx context.Context) (address.Address, error) {
+	return n.Wallet.GetDefault()
+}
+
+func (n *ClientNodeAdapter) ValidateAskSignature(ctx context.Context, ask *storagemarket.SignedStorageAsk, encodedTs shared.TipSetToken) (bool, error) {
+	tsk, err := types.TipSetKeyFromBytes(encodedTs)
+	if err != nil {
+		return false, err
+	}
+
+	mi, err := n.StateMinerInfo(ctx, ask.Ask.Miner, tsk)
+	if err != nil {
+		return false, xerrors.Errorf("failed to get worker for miner in ask", err)
+	}
+
+	sigb, err := cborutil.Dump(ask.Ask)
+	if err != nil {
+		return false, xerrors.Errorf("failed to re-serialize ask")
+	}
+
+	ts, err := n.ChainGetTipSet(ctx, tsk)
+	if err != nil {
+		return false, xerrors.Errorf("failed to load tipset")
+	}
+
+	m, err := n.sm.ResolveToKeyAddress(ctx, mi.Worker, ts)
+
+	if err != nil {
+		return false, xerrors.Errorf("failed to resolve miner to key address")
+	}
+
+	err = sigs.Verify(ask.Signature, m, sigb)
+	return err == nil, err
+}
+
+func (n *ClientNodeAdapter) GetMinerInfo(ctx context.Context, maddr address.Address, encodedTs shared.TipSetToken) (*storagemarket.StorageProviderInfo, error) {
+	tsk, err := types.TipSetKeyFromBytes(encodedTs)
+	if err != nil {
+		return nil, err
+	}
+	mi, err := n.StateMinerInfo(ctx, maddr, tsk)
+	if err != nil {
+		return nil, err
+	}
+	multiaddrs := make([]multiaddr.Multiaddr, 0, len(mi.Multiaddrs))
+	for _, a := range mi.Multiaddrs {
+		maddr, err := multiaddr.NewMultiaddrBytes(a)
+		if err != nil {
+			return nil, err
+		}
+		multiaddrs = append(multiaddrs, maddr)
+	}
+	out := utils.NewStorageProviderInfo(maddr, mi.Worker, mi.SectorSize, mi.PeerId, multiaddrs)
+	return &out, nil
 }
 
 // GetChainHead returns a tipset token for the current chain head
