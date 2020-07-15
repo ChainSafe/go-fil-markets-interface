@@ -217,7 +217,7 @@ func (n *ClientNodeAdapter) ValidateAskSignature(ctx context.Context, ask *stora
 
 	mi, err := n.StateMinerInfo(ctx, ask.Ask.Miner, tsk)
 	if err != nil {
-		return false, xerrors.Errorf("failed to get worker for miner in ask", err)
+		return false, xerrors.Errorf("failed to get worker for miner in ask %v", err)
 	}
 
 	sigb, err := cborutil.Dump(ask.Ask)
