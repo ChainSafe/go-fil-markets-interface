@@ -7,34 +7,26 @@ import (
 	"bytes"
 	"context"
 
-	cborutil "github.com/filecoin-project/go-cbor-util"
-	samarket "github.com/filecoin-project/specs-actors/actors/builtin/market"
-
-	"github.com/multiformats/go-multiaddr"
-
-	"github.com/filecoin-project/specs-actors/actors/builtin/market"
-
-	"github.com/golang/glog"
-
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
-	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/lib/sigs"
-	"github.com/filecoin-project/lotus/markets/utils"
-
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/specs-actors/actors/builtin"
-
-	"github.com/filecoin-project/go-fil-markets/shared"
-
 	"github.com/ChainSafe/fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
+	cborutil "github.com/filecoin-project/go-cbor-util"
+	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
+	"github.com/filecoin-project/lotus/build"
+	"github.com/filecoin-project/lotus/chain/types"
+	"github.com/filecoin-project/lotus/lib/sigs"
+	"github.com/filecoin-project/lotus/markets/utils"
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/filecoin-project/specs-actors/actors/builtin"
+	"github.com/filecoin-project/specs-actors/actors/builtin/market"
+	samarket "github.com/filecoin-project/specs-actors/actors/builtin/market"
+	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	"github.com/golang/glog"
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multiaddr"
+	"golang.org/x/xerrors"
 )
 
 // This file implements StorageClientNode which is a client interface for making storage deals
