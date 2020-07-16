@@ -7,9 +7,8 @@ import (
 	"context"
 
 	"github.com/filecoin-project/go-address"
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/lotus/chain/types"
+	"github.com/ipfs/go-cid"
 )
 
 type MpoolAPI struct{}

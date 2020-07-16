@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
-	"github.com/ChainSafe/fil-markets-interface/rpc"
-	"github.com/ChainSafe/fil-markets-interface/storageadapter"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/ChainSafe/fil-markets-interface/rpc"
+	"github.com/ChainSafe/fil-markets-interface/storageadapter"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 		log.Fatalf("Error while setting up the server.")
 	}
 
-	_ = storageadapter.ClientNodeAdapter{}
+	_ = storageadapter.NewStorageCommonImpl()
 
 	sdCh := make(chan os.Signal, 1)
 	signal.Notify(sdCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
