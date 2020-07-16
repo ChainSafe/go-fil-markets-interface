@@ -1,10 +1,9 @@
 package auth
 
 import (
-"context"
-"net/http"
+	"context"
+	"net/http"
 )
-
 
 type Handler struct {
 	Verify func(ctx context.Context, token string) error // Implement this later.
@@ -16,4 +15,3 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	h.Next(w, r.WithContext(ctx))
 }
-

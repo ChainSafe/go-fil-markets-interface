@@ -6,13 +6,14 @@ package rpc
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/ChainSafe/fil-markets-interface/api"
 	"github.com/ChainSafe/fil-markets-interface/auth"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
-	"log"
-	"net/http"
 )
 
 var serverAddr = flag.String("server", "/ip4/127.0.0.1/tcp/7070/http", "server address")
