@@ -41,7 +41,7 @@ type ClientNodeAdapter struct {
 	nodeapi.StateAPI
 }
 
-func NewStorageCommonImpl() storagemarket.StorageClientNode {
+func NewStorageClientNode() storagemarket.StorageClientNode {
 	return &ClientNodeAdapter{}
 }
 
