@@ -1,3 +1,6 @@
+// Copyright 2020 ChainSafe Systems
+// SPDX-License-Identifier: Apache-2.0, MIT
+
 package main
 
 import (
@@ -7,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/ChainSafe/fil-markets-interface/retrievaladapter"
 	"github.com/ChainSafe/fil-markets-interface/rpc"
 	"github.com/ChainSafe/fil-markets-interface/storageadapter"
 )
@@ -17,7 +21,8 @@ func main() {
 		log.Fatalf("Error while setting up the server.")
 	}
 
-	_ = storageadapter.NewStorageCommonImpl()
+	_ = storageadapter.NewStorageClientNode()
+	_ = retrievaladapter.NewRetrievalClientNode()
 
 	sdCh := make(chan os.Signal, 1)
 	signal.Notify(sdCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
