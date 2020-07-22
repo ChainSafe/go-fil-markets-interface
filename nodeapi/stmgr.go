@@ -11,12 +11,14 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type StateManager struct{}
+type StateManager struct {
+	node *Client
+}
 
 func (sm *StateManager) WaitForMessage(ctx context.Context, mcid cid.Cid, confidence uint64) (*types.TipSet, *types.MessageReceipt, error) {
-	return nil, nil, nil
+	return sm.node.StateManager.WaitForMessage(ctx, mcid, confidence)
 }
 
 func (sm *StateManager) ResolveToKeyAddress(ctx context.Context, addr address.Address, ts *types.TipSet) (address.Address, error) {
-	return addr, nil
+	return sm.node.StateManager.ResolveToKeyAddress(ctx, addr, ts)
 }

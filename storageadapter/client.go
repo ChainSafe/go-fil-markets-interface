@@ -39,6 +39,8 @@ type ClientNodeAdapter struct {
 	nodeapi.ChainAPI
 	nodeapi.MpoolAPI
 	nodeapi.StateAPI
+
+	node *nodeapi.Client
 }
 
 func NewStorageClientNode() storagemarket.StorageClientNode {
@@ -112,7 +114,7 @@ func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal stor
 		return 0, xerrors.Errorf("getting deal pubsish message: %w", err)
 	}
 
-	mi, err := nodeapi.StateMinerInfo(ctx, n.sm, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
+	mi, err := nodeapi.StateMinerInfo(ctx, n.node, n.sm, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
 	if err != nil {
 		return 0, xerrors.Errorf("getting miner worker failed: %w", err)
 	}
@@ -331,7 +333,7 @@ func (n *ClientNodeAdapter) SignBytes(ctx context.Context, signer address.Addres
 // OnDealSectorCommitted waits for a deal's sector to be sealed and proved, indicating the deal is active
 func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider address.Address, dealID abi.DealID, cb storagemarket.DealSectorCommittedCallback) error {
 	checkFunc := func(ts *types.TipSet) (done bool, more bool, err error) {
-		sd, err := nodeapi.GetStorageDeal(ctx, dealID, ts)
+		sd, err := nodeapi.GetStorageDeal(ctx, n.node, dealID, ts)
 
 		if err != nil {
 			// TODO: This may be fine for some errors
@@ -358,7 +360,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 			return false, nil
 		}
 
-		sd, err := nodeapi.GetStorageDeal(ctx, abi.DealID(dealID), ts)
+		sd, err := nodeapi.GetStorageDeal(ctx, n.node, dealID, ts)
 		if err != nil {
 			return false, xerrors.Errorf("failed to look up deal on chain: %w", err)
 		}

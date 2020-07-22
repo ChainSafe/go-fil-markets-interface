@@ -11,13 +11,14 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type MpoolAPI struct{}
+type MpoolAPI struct {
+	node *Client
+}
 
-// TODO(arijit): Implement the following to connect to Node and fetch info.
 func (a *MpoolAPI) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
-	return nil, nil
+	return a.node.Mpool.PushMessage(ctx, msg)
 }
 
 func (a *MpoolAPI) EnsureAvailable(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error) {
-	return cid.Undef, nil
+	return a.node.Mpool.EnsureAvailable(ctx, addr, wallet, amt)
 }
