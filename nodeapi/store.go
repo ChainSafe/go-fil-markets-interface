@@ -8,12 +8,14 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type ChainStore struct{}
+type ChainStore struct {
+	node *Client
+}
 
 func (cs *ChainStore) GetMessage(c cid.Cid) (*types.Message, error) {
-	return nil, nil
+	return cs.node.ChainStore.GetMessage(c)
 }
 
 func (cs *ChainStore) GetHeaviestTipSet() *types.TipSet {
-	return nil
+	return cs.node.ChainStore.GetHeaviestTipSet()
 }

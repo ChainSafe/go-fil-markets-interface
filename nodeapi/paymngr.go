@@ -12,14 +12,16 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type PaymentManager struct{}
+type PaymentManager struct {
+	node *Client
+}
 
 func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error) {
-	return address.Undef, cid.Undef, nil
+	return pm.node.PaymentManager.GetPaych(ctx, from, to, ensureFree)
 }
 
 func (pm *PaymentManager) AllocateLane(ch address.Address) (uint64, error) {
-	return 0, nil
+	return pm.node.PaymentManager.AllocateLane(ch)
 }
 
 // PaychVoucherCreate creates a new signed voucher on the given payment channel
@@ -28,5 +30,5 @@ func (pm *PaymentManager) AllocateLane(ch address.Address) (uint64, error) {
 // actual additional value of this voucher will only be the difference between
 // the two.
 func (pm *PaymentManager) PaychVoucherCreate(ctx context.Context, pch address.Address, amt types.BigInt, lane uint64) (*paych.SignedVoucher, error) {
-	return nil, nil
+	return pm.node.PaymentManager.PaychVoucherCreate(ctx, pch, amt, lane)
 }
