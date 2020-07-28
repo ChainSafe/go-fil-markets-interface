@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	cid "github.com/ipfs/go-cid/_rsrch/cidiface"
+
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
@@ -32,14 +34,15 @@ type Client struct {
 		PaychVoucherCreate func(ctx context.Context, pch address.Address, amt types.BigInt, lane uint64) (*paych.SignedVoucher, error)
 	}
 	State struct {
-		StateMarketBalance func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error)
-		StateAccountKey    func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
-		WaitForMessage     func(ctx context.Context) error
-		StateWaitMsg       func(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error)
-		StateMarketDeals   func(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error)
-		StateListMiners    func(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error)
-		StateMinerInfo     func(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error)
-		StateLookupID      func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
+		StateMarketBalance     func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error)
+		StateAccountKey        func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
+		WaitForMessage         func(ctx context.Context) error
+		StateWaitMsg           func(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error)
+		StateMarketDeals       func(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error)
+		StateListMiners        func(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error)
+		StateMinerInfo         func(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error)
+		StateLookupID          func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
+		StateMarketStorageDeal func(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error)
 	}
 	StateManager struct {
 		WaitForMessage      func(ctx context.Context, mcid cid.Cid, confidence uint64) (*types.TipSet, *types.MessageReceipt, error)

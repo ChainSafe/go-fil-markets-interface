@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/filecoin-project/lotus/chain/events"
+	"github.com/filecoin-project/lotus/chain/events/state"
+
 	"github.com/ChainSafe/fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -427,5 +430,82 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 
 	// Use the callback accordingly based on events.
 	_, _, _, _ = checkFunc, called, matchEvent, revert
+	return nil
+}
+
+func (n *ClientNodeAdapter) OnDealExpiredOrSlashed(ctx context.Context, dealID abi.DealID, onDealExpired storagemarket.DealExpiredCallback, onDealSlashed storagemarket.DealSlashedCallback) error {
+	head, err := n.ChainHead(ctx)
+	if err != nil {
+		return xerrors.Errorf("client: failed to get chain head: %w", err)
+	}
+
+	sd, err := n.StateMarketStorageDeal(ctx, dealID, head.Key())
+	if err != nil {
+		return xerrors.Errorf("client: failed to look up deal %d on chain: %w", dealID, err)
+	}
+
+	// Called immediately to check if the deal has already expired or been slashed
+	checkFunc := func(ts *types.TipSet) (done bool, more bool, err error) {
+		// Check if the deal has already expired
+		if sd.Proposal.EndEpoch <= ts.Height() {
+			onDealExpired(nil)
+			return true, false, nil
+		}
+
+		// If there is no deal assume it's already been slashed
+		if sd.State.SectorStartEpoch < 0 {
+			onDealSlashed(ts.Height(), nil)
+			return true, false, nil
+		}
+
+		// No events have occurred yet, so return
+		// done: false, more: true (keep listening for events)
+		return false, true, nil
+	}
+
+	// Called when there was a match against the state change we're looking for
+	// and the chain has advanced to the confidence height
+	stateChanged := func(ts *types.TipSet, ts2 *types.TipSet, states events.StateChange, h abi.ChainEpoch) (more bool, err error) {
+		// Check if the deal has already expired
+		if sd.Proposal.EndEpoch <= ts2.Height() {
+			onDealExpired(nil)
+			return false, nil
+		}
+
+		// Timeout waiting for state change
+		if states == nil {
+			glog.Error("timed out waiting for deal expiry")
+			return false, nil
+		}
+
+		changedDeals, ok := states.(state.ChangedDeals)
+		if !ok {
+			panic("Expected state.ChangedDeals")
+		}
+
+		deal, ok := changedDeals[dealID]
+		if !ok {
+			// No change to deal
+			return true, nil
+		}
+
+		// Deal was slashed
+		if deal.To == nil {
+			onDealSlashed(ts2.Height(), nil)
+			return false, nil
+		}
+
+		return true, nil
+	}
+
+	// Called when there was a chain reorg and the state change was reverted
+	revert := func(ctx context.Context, ts *types.TipSet) error {
+		// TODO: Is it ok to just ignore this?
+		glog.Warning("deal state reverted; TODO: actually handle this!")
+		return nil
+	}
+
+	// Use the callback accordingly based on events.
+	_, _, _ = checkFunc, stateChanged, revert
 	return nil
 }
