@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	cid "github.com/ipfs/go-cid/_rsrch/cidiface"
-
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
