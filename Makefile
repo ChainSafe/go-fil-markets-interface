@@ -14,14 +14,14 @@ FFI_PATH:=./extern/filecoin-ffi/
 
 submodule:
 	git submodule update --init --recursive
-	make -C $(FFI_PATH)
+	make -C extern/filecoin-ffi
 
-$(GOLANGCI):
+get-lint:
 	if [ ! -f ./bin/golangci-lint ]; then \
 		wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s latest; \
 	fi;
 
-lint: submodule $(GOLANGCI)
+lint: submodule get-lint
 	./bin/golangci-lint run ./... --timeout 5m0s
 
 test: submodule
