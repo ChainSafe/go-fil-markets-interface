@@ -13,7 +13,7 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"golang.org/x/xerrors"
 
-	"github.com/ChainSafe/fil-markets-interface/nodeapi"
+	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/specs-actors/actors/abi"

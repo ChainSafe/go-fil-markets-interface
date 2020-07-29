@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/ChainSafe/fil-markets-interface/nodeapi"
+	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	"github.com/filecoin-project/go-fil-markets/shared"
