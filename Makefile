@@ -21,7 +21,7 @@ get-lint:
 		wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s latest; \
 	fi;
 
-lint: submodule get-lint
+lint: get-lint submodule
 	./bin/golangci-lint run ./... --timeout 5m0s
 
 test: submodule
