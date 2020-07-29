@@ -14,6 +14,7 @@ FFI_PATH:=./extern/filecoin-ffi/
 
 submodule:
 	git submodule update --init --recursive
+	sudo apt-get install ocl-icd-opencl-dev
 	make -C extern/filecoin-ffi
 
 get-lint:
@@ -22,7 +23,7 @@ get-lint:
 	fi;
 
 lint: get-lint submodule
-	./bin/golangci-lint run ./... --timeout 5m0s
+	./bin/golangci-lint run ./... --timeout 5m0s -v --new-from-rev origin/master
 
 test: submodule
 	go test ./...
