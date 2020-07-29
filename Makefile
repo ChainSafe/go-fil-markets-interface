@@ -16,9 +16,11 @@ $(GOLANGCI):
 	fi;
 
 lint: $(GOLANGCI)
+	git submodule update --init --recursive
 	./bin/golangci-lint run ./... --timeout 5m0s
 
 test:
+	git submodule update --init --recursive
 	go test ./...
 
 license:
