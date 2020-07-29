@@ -1,4 +1,4 @@
-module github.com/ChainSafe/fil-markets-interface
+module github.com/ChainSafe/go-fil-markets-interface
 
 go 1.13
 

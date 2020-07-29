@@ -10,9 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ChainSafe/fil-markets-interface/retrievaladapter"
-	"github.com/ChainSafe/fil-markets-interface/rpc"
-	"github.com/ChainSafe/fil-markets-interface/storageadapter"
+	"github.com/ChainSafe/go-fil-markets-interface/retrievaladapter"
+	"github.com/ChainSafe/go-fil-markets-interface/rpc"
+	"github.com/ChainSafe/go-fil-markets-interface/storageadapter"
 )
 
 func main() {
