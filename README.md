@@ -1,6 +1,6 @@
 # Filecoin Markets Interface
 
-[![Build Status](https://travis-ci.com/ChainSafe/fil-markets-interface.svg?token=tppYFL7pBXTmrb45py5Q&branch=main)](https://travis-ci.com/ChainSafe/fil-markets-interface)
+[![Build Status](https://travis-ci.com/ChainSafe/go-fil-markets-interface.svg?token=tppYFL7pBXTmrb45py5Q&branch=main)](https://travis-ci.com/ChainSafe/go-fil-markets-interface)
 
 This project provides an interface for [go-fil-markets](https://github.com/filecoin-project/go-fil-markets) to enable compatibility with any Filecoin node implementation.
 

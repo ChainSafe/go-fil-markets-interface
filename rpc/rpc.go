@@ -9,8 +9,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ChainSafe/fil-markets-interface/api"
-	"github.com/ChainSafe/fil-markets-interface/auth"
+	"github.com/ChainSafe/go-fil-markets-interface/api"
+	"github.com/ChainSafe/go-fil-markets-interface/auth"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
