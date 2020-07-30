@@ -21,3 +21,7 @@ func (w *Wallet) Sign(ctx context.Context, addr address.Address, msg []byte) (*c
 func (w *Wallet) GetDefault() (address.Address, error) {
 	return w.node.Wallet.GetDefault()
 }
+
+func (w *Wallet) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
+	return w.node.Wallet.HasKey(addr)
+}
