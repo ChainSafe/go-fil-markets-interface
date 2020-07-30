@@ -14,7 +14,6 @@ FFI_PATH:=./extern/filecoin-ffi/
 
 submodule:
 	git submodule update --init --recursive
-	sudo apt-get install ocl-icd-opencl-dev
 	make -C extern/filecoin-ffi
 
 get-lint:

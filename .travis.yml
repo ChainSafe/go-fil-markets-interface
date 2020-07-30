@@ -10,6 +10,9 @@ cache:
     - $HOME/.cache/go-build
     - $GOPATH/pkg/mod
 
+install:
+  - sudo apt-get install ocl-icd-opencl-dev
+
 jobs:
   include:
     - language: go
