@@ -6,6 +6,8 @@ package nodeapi
 import (
 	"context"
 
+	"github.com/filecoin-project/specs-actors/actors/abi"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -48,4 +50,8 @@ func (a *StateAPI) StateMinerInfo(ctx context.Context, actor address.Address, ts
 
 func (a *StateAPI) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
 	return a.node.State.StateLookupID(ctx, addr, tsk)
+}
+
+func (a *StateAPI) StateMarketStorageDeal(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error) {
+	return a.node.State.StateMarketStorageDeal(ctx, dealId, tsk)
 }
