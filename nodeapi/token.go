@@ -28,7 +28,7 @@ func (a APIInfo) AuthHeader() http.Header {
 		headers.Add("Authorization", "Bearer "+string(a.Token))
 		return headers
 	}
-	return nil
+	return http.Header{}
 }
 
 func GetAPIInfo() (APIInfo, error) {

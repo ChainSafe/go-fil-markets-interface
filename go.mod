@@ -29,6 +29,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multiaddr-net v0.1.5
 	github.com/multiformats/go-multihash v0.0.14
+	github.com/stretchr/testify v1.6.1
 	go.uber.org/fx v1.9.0
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 )
