@@ -4,9 +4,14 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/ChainSafe/go-fil-markets-interface/config"
+
+	"github.com/ChainSafe/go-fil-markets-interface/utils"
+
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
+	"github.com/urfave/cli/v2"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -17,7 +22,7 @@ import (
 	"github.com/filecoin-project/lotus/api"
 )
 
-type Client struct {
+type Node struct {
 	Chain struct {
 		ChainHead      func(ctx context.Context) (*types.TipSet, error)
 		ChainGetTipSet func(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
@@ -62,8 +67,8 @@ type Client struct {
 	}
 }
 
-func NewNodeClient(addr string, requestHeader http.Header) (*Client, jsonrpc.ClientCloser, error) {
-	var node Client
+func NewNodeClient(addr string, requestHeader http.Header) (*Node, jsonrpc.ClientCloser, error) {
+	var node Node
 	closer, err := jsonrpc.NewMergeClient(addr, "MarketInterface",
 		[]interface{}{
 			&node.Chain,
@@ -77,4 +82,8 @@ func NewNodeClient(addr string, requestHeader http.Header) (*Client, jsonrpc.Cli
 		},
 		requestHeader)
 	return &node, closer, err
+}
+
+func GetNodeAPI(ctx *cli.Context) (*Node, jsonrpc.ClientCloser, error) {
+	return NewNodeClient(config.Market.NodeIP, utils.AuthHeader(config.Market.NodeAuthToken))
 }

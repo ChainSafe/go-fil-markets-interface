@@ -9,7 +9,7 @@ import (
 )
 
 type ChainStore struct {
-	node *Client
+	node *Node
 }
 
 func (cs *ChainStore) GetMessage(c cid.Cid) (*types.Message, error) {

@@ -13,10 +13,10 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 )
 
-func GetStorageDeal(ctx context.Context, client *Client, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
+func GetStorageDeal(ctx context.Context, client *Node, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
 	return client.Utils.GetStorageDeal(ctx, dealID, ts)
 }
 
-func StateMinerInfo(ctx context.Context, client *Client, sm *StateManager, ts *types.TipSet, maddr address.Address) (miner.MinerInfo, error) {
+func StateMinerInfo(ctx context.Context, client *Node, sm *StateManager, ts *types.TipSet, maddr address.Address) (miner.MinerInfo, error) {
 	return client.Utils.StateMinerInfo(ctx, sm, ts, maddr)
 }

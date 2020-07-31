@@ -1,0 +1,6 @@
+{
+  "nodeIP" : "ws://127.0.0.1:7777/rpc/v0",
+  "nodeAuthToken": "",
+  "marketIP" : "ws://127.0.0.1:7777/rpc/v0",
+  "marketAuthToken": ""
+}

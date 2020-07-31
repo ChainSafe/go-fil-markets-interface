@@ -12,7 +12,7 @@ import (
 )
 
 type StateManager struct {
-	node *Client
+	node *Node
 }
 
 func (sm *StateManager) WaitForMessage(ctx context.Context, mcid cid.Cid, confidence uint64) (*types.TipSet, *types.MessageReceipt, error) {

@@ -11,7 +11,7 @@ import (
 )
 
 type Wallet struct {
-	node *Client
+	node *Node
 }
 
 func (w *Wallet) Sign(ctx context.Context, addr address.Address, msg []byte) (*crypto.Signature, error) {

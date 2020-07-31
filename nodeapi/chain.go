@@ -10,7 +10,7 @@ import (
 )
 
 type ChainAPI struct {
-	node *Client
+	node *Node
 }
 
 func (a *ChainAPI) ChainHead(ctx context.Context) (*types.TipSet, error) {

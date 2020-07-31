@@ -16,7 +16,7 @@ import (
 
 type StateAPI struct {
 	Wallet Wallet
-	node   *Client
+	node   *Node
 }
 
 func (a *StateAPI) StateMarketBalance(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error) {
