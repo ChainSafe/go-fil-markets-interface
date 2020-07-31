@@ -11,7 +11,6 @@ require (
 	github.com/filecoin-project/lotus v0.4.3-0.20200728010654-c0f0e2ba45cf
 	github.com/filecoin-project/sector-storage v0.0.0-20200727112136-9377cb376d25
 	github.com/filecoin-project/specs-actors v0.8.1-0.20200724015154-3c690d9b7e1d
-	github.com/gbrlsnchs/jwt/v3 v3.0.0-beta.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/ipfs/go-blockservice v0.1.4-0.20200624145336-a978cec6e834
 	github.com/ipfs/go-cid v0.0.6
@@ -25,7 +24,6 @@ require (
 	github.com/ipld/go-car v0.1.1-0.20200526133713-1c7508d55aae
 	github.com/ipld/go-ipld-prime v0.0.2-0.20200428162820-8b59dc292b8e
 	github.com/libp2p/go-libp2p-core v0.6.0
-	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multiaddr-net v0.1.5
 	github.com/multiformats/go-multihash v0.0.14
