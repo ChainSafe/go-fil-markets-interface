@@ -45,16 +45,14 @@ func parseEnv(val, env string) (APIInfo, error) {
 	sp := strings.SplitN(val, ":", 2)
 	if len(sp) != 2 {
 		return APIInfo{}, fmt.Errorf("could not parse env(%s)", env)
-	} else {
-		ma, err := multiaddr.NewMultiaddr(sp[1])
-		if err != nil {
-			return APIInfo{}, fmt.Errorf("could not parse multiaddr from env(%s): %w", env, err)
-		}
-		return APIInfo{
-			Addr:  ma,
-			Token: []byte(sp[0]),
-		}, nil
 	}
 
-	return APIInfo{}, nil
+	ma, err := multiaddr.NewMultiaddr(sp[1])
+	if err != nil {
+		return APIInfo{}, fmt.Errorf("could not parse multiaddr from env(%s): %w", env, err)
+	}
+	return APIInfo{
+		Addr:  ma,
+		Token: []byte(sp[0]),
+	}, nil
 }
