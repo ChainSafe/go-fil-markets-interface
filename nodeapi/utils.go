@@ -10,14 +10,12 @@ import (
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 )
 
-// TODO(arijit): Implement locally.
 func GetStorageDeal(ctx context.Context, client *Node, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
-	return client.Utils.GetStorageDeal(ctx, dealID, ts)
+	return client.Utils.StateMarketStorageDeal(ctx, dealID, ts.Key())
 }
 
-func StateMinerInfo(ctx context.Context, client *Node, sm *StateManager, ts *types.TipSet, maddr address.Address) (miner.MinerInfo, error) {
-	return client.Utils.StateMinerInfo(ctx, sm, ts, maddr)
+func StateMinerInfo(ctx context.Context, client *Node, ts *types.TipSet, maddr address.Address) (api.MinerInfo, error) {
+	return client.Utils.StateMinerInfo(ctx, maddr, ts.Key())
 }

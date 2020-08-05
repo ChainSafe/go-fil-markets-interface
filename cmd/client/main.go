@@ -715,7 +715,7 @@ var clientRetrieveCmd = &cli.Command{
 		if cctx.String("from") != "" {
 			payer, err = address.NewFromString(cctx.String("from"))
 		} else {
-			payer, err = nodeapi.Wallet.GetDefault()
+			payer, err = nodeapi.Wallet.WalletDefaultAddress(context.TODO())
 		}
 		if err != nil {
 			return err

@@ -5,7 +5,6 @@ package nodeapi
 
 import (
 	"context"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -25,11 +24,6 @@ func (a *StateAPI) StateMarketBalance(ctx context.Context, addr address.Address,
 
 func (a *StateAPI) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
 	return a.node.State.StateAccountKey(ctx, addr, tsk)
-}
-
-// TODO(arijit): Implement locally.
-func (a *StateAPI) WaitForMessage(ctx context.Context) error {
-	return a.node.State.WaitForMessage(ctx)
 }
 
 func (a *StateAPI) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {

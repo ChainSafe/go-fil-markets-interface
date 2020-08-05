@@ -4,6 +4,7 @@
 package nodeapi
 
 import (
+	"context"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/ipfs/go-cid"
 )
@@ -13,9 +14,9 @@ type ChainStore struct {
 }
 
 func (cs *ChainStore) GetMessage(c cid.Cid) (*types.Message, error) {
-	return cs.node.ChainStore.GetMessage(c)
+	return cs.node.ChainStore.ChainGetMessage(context.TODO(), c)
 }
 
 func (cs *ChainStore) GetHeaviestTipSet() *types.TipSet {
-	return cs.node.ChainStore.GetHeaviestTipSet()
+	return cs.node.ChainStore.ChainHead(context.TODO())
 }

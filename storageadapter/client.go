@@ -116,7 +116,7 @@ func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal stor
 		return 0, xerrors.Errorf("getting deal pubsish message: %w", err)
 	}
 
-	mi, err := nodeapi.StateMinerInfo(ctx, n.node, n.sm, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
+	mi, err := nodeapi.StateMinerInfo(ctx, n.node, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
 	if err != nil {
 		return 0, xerrors.Errorf("getting miner worker failed: %w", err)
 	}

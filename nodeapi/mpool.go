@@ -16,9 +16,9 @@ type MpoolAPI struct {
 }
 
 func (a *MpoolAPI) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
-	return a.node.Mpool.PushMessage(ctx, msg)
+	return a.node.Mpool.MpoolPushMessage(ctx, msg)
 }
 
 func (a *MpoolAPI) EnsureAvailable(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error) {
-	return a.node.Mpool.EnsureAvailable(ctx, addr, wallet, amt)
+	return a.node.Mpool.MarketEnsureAvailable(ctx, addr, wallet, amt)
 }

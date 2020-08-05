@@ -53,7 +53,7 @@ func (c *ClientNodeAdapter) GetOrCreatePaymentChannel(ctx context.Context, clien
 // CreatePaymentVoucher will automatically make vouchers only for the difference
 // in total
 func (c *ClientNodeAdapter) AllocateLane(paymentChannel address.Address) (uint64, error) {
-	return c.PaymentManager.AllocateLane(paymentChannel)
+	return c.PaymentManager.AllocateLane(context.TODO(), paymentChannel)
 }
 
 // CreatePaymentVoucher creates a new payment voucher in the given lane for a
