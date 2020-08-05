@@ -47,5 +47,9 @@ func NewMarketClient(addr string, requestHeader http.Header) (*Market, jsonrpc.C
 }
 
 func GetMarketAPI(ctx *cli.Context) (*Market, jsonrpc.ClientCloser, error) {
-	return NewMarketClient(config.Market.MarketIP, utils.AuthHeader(config.Market.MarketAuthToken))
+	addr, err := config.Api.Market.DialArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewMarketClient(addr, utils.AuthHeader(string(config.Api.Market.Token)))
 }

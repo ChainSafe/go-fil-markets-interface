@@ -13,6 +13,7 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 )
 
+// TODO(arijit): Implement locally.
 func GetStorageDeal(ctx context.Context, client *Node, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
 	return client.Utils.GetStorageDeal(ctx, dealID, ts)
 }

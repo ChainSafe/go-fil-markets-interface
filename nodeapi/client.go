@@ -88,5 +88,9 @@ func NewNodeClient(addr string, requestHeader http.Header) (*Node, jsonrpc.Clien
 }
 
 func GetNodeAPI(ctx *cli.Context) (*Node, jsonrpc.ClientCloser, error) {
-	return NewNodeClient(config.Market.NodeIP, utils.AuthHeader(config.Market.NodeAuthToken))
+	addr, err := config.Api.Node.DialArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewNodeClient(addr, utils.AuthHeader(string(config.Api.Node.Token)))
 }

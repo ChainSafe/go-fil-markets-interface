@@ -10,30 +10,24 @@ import (
 	"strconv"
 	"text/tabwriter"
 
+	"github.com/ChainSafe/go-fil-markets-interface/client"
 	"github.com/ChainSafe/go-fil-markets-interface/config"
-
-	lcli "github.com/filecoin-project/lotus/cli"
-	"go.opencensus.io/trace"
-
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
-
-	"github.com/filecoin-project/specs-actors/actors/builtin/market"
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/ipfs/go-cid"
-
-	"github.com/ChainSafe/go-fil-markets-interface/client"
-
 	lapi "github.com/filecoin-project/lotus/api"
+	"github.com/filecoin-project/lotus/chain/types"
+	lcli "github.com/filecoin-project/lotus/cli"
+	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/filecoin-project/specs-actors/actors/builtin/market"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-cidutil/cidenc"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multibase"
 	"github.com/urfave/cli/v2"
+	"go.opencensus.io/trace"
 	"golang.org/x/xerrors"
 )
 

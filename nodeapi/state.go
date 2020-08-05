@@ -27,11 +27,11 @@ func (a *StateAPI) StateAccountKey(ctx context.Context, addr address.Address, ts
 	return a.node.State.StateAccountKey(ctx, addr, tsk)
 }
 
+// TODO(arijit): Implement locally.
 func (a *StateAPI) WaitForMessage(ctx context.Context) error {
 	return a.node.State.WaitForMessage(ctx)
 }
 
-// Keep polling till the Msg is received.
 func (a *StateAPI) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {
 	return a.node.State.StateWaitMsg(ctx, msg, confidence)
 }

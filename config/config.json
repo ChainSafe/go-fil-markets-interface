@@ -1,6 +1,10 @@
 {
-  "nodeIP" : "ws://127.0.0.1:7777/rpc/v0",
-  "nodeAuthToken": "",
-  "marketIP" : "ws://127.0.0.1:7777/rpc/v0",
-  "marketAuthToken": ""
+  "Node" : {
+    "Addr" : "/ip4/127.0.0.1/tcp/7777/ws",
+    "Token": "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SkJiR3h2ZHlJNld5SnlaV0ZrSWl3aWQzSnBkR1VpTENKemFXZHVJaXdpWVdSdGFXNGlYWDAuSXgwaUtORnVlOEVGWUx4Y0ZZT2lCeHpUY2VGTG9OY3Vuc1FFeWs2MUZuQQ=="
+  },
+  "Market" : {
+    "Addr" : "/ip4/127.0.0.1/tcp/7777/ws",
+    "Token": "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SkJiR3h2ZHlJNld5SnlaV0ZrSWl3aWQzSnBkR1VpTENKemFXZHVJaXdpWVdSdGFXNGlYWDAuSXgwaUtORnVlOEVGWUx4Y0ZZT2lCeHpUY2VGTG9OY3Vuc1FFeWs2MUZuQQ=="
+  }
 }
