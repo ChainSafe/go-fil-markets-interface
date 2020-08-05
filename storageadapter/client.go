@@ -42,7 +42,7 @@ type ClientNodeAdapter struct {
 	nodeapi.MpoolAPI
 	nodeapi.StateAPI
 
-	node *nodeapi.Client
+	node *nodeapi.Node
 }
 
 func NewStorageClientNode() storagemarket.StorageClientNode {

@@ -26,8 +26,11 @@ require (
 	github.com/libp2p/go-libp2p-core v0.6.0
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multiaddr-net v0.1.5
+	github.com/multiformats/go-multibase v0.0.3
 	github.com/multiformats/go-multihash v0.0.14
 	github.com/stretchr/testify v1.6.1
+	github.com/urfave/cli/v2 v2.2.0
+	go.opencensus.io v0.22.3
 	go.uber.org/fx v1.9.0
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 )

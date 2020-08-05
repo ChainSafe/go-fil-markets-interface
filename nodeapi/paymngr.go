@@ -13,7 +13,7 @@ import (
 )
 
 type PaymentManager struct {
-	node *Client
+	node *Node
 }
 
 func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error) {
