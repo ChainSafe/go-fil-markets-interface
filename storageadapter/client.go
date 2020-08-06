@@ -6,7 +6,6 @@ package storageadapter
 import (
 	"bytes"
 	"context"
-
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -41,12 +40,21 @@ type ClientNodeAdapter struct {
 	nodeapi.ChainAPI
 	nodeapi.MpoolAPI
 	nodeapi.StateAPI
+	nodeapi.ApiBStore
 
 	node *nodeapi.Node
+	ev   *events.Events
+}
+
+type clientApi struct {
+	nodeapi.ChainAPI
+	nodeapi.StateAPI
 }
 
 func NewStorageClientNode() storagemarket.StorageClientNode {
-	return &ClientNodeAdapter{}
+	return &ClientNodeAdapter{
+		ev: events.NewEvents(context.TODO(), &clientApi{nodeapi.ChainAPI{}, nodeapi.StateAPI{}}),
+	}
 }
 
 func (n *ClientNodeAdapter) ListClientDeals(ctx context.Context, addr address.Address, encodedTs shared.TipSetToken) ([]storagemarket.StorageDeal, error) {
@@ -504,7 +512,20 @@ func (n *ClientNodeAdapter) OnDealExpiredOrSlashed(ctx context.Context, dealID a
 		return nil
 	}
 
-	// Use the callback accordingly based on events.
-	_, _, _ = checkFunc, stateChanged, revert
+	// Watch for state changes to the deal
+	preds := state.NewStatePredicates(n)
+	dealDiff := preds.OnStorageMarketActorChanged(
+		preds.OnDealStateChanged(
+			preds.DealStateChangedForIDs([]abi.DealID{dealID})))
+	match := func(oldTs, newTs *types.TipSet) (bool, events.StateChange, error) {
+		return dealDiff(ctx, oldTs.Key(), newTs.Key())
+	}
+
+	// Wait until after the end epoch for the deal and then timeout
+	timeout := (sd.Proposal.EndEpoch - head.Height()) + 1
+	if err := n.ev.StateChanged(checkFunc, stateChanged, revert, int(build.MessageConfidence)+1, timeout, match); err != nil {
+		return xerrors.Errorf("failed to set up state changed handler: %w", err)
+	}
+
 	return nil
 }

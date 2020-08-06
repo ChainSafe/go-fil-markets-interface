@@ -27,8 +27,13 @@ import (
 
 type Node struct {
 	Chain struct {
-		ChainHead      func(ctx context.Context) (*types.TipSet, error)
-		ChainGetTipSet func(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
+		ChainHead              func(ctx context.Context) (*types.TipSet, error)
+		ChainGetTipSet         func(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
+		ChainNotify            func(context.Context) (<-chan []*api.HeadChange, error)
+		ChainGetBlockMessages  func(ctx context.Context, blockCid cid.Cid) (*api.BlockMessages, error)
+		ChainGetTipSetByHeight func(ctx context.Context, e abi.ChainEpoch, ts types.TipSetKey) (*types.TipSet, error)
+		ChainReadObj           func(context.Context, cid.Cid) ([]byte, error)
+		ChainHasObj            func(context.Context, cid.Cid) (bool, error)
 	}
 	Mpool struct {
 		MpoolPushMessage      func(ctx context.Context, msg *types.Message) (*types.SignedMessage, error)
@@ -50,6 +55,8 @@ type Node struct {
 		StateLookupID             func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error)
 		StateMarketStorageDeal    func(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error)
 		StateMinerProvingDeadline func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error)
+		StateGetActor             func(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error)
+		StateGetReceipt           func(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
 	}
 	StateManager struct {
 		StateWaitMsg  func(ctx context.Context, mcid cid.Cid, confidence uint64) (*api.MsgLookup, error)
