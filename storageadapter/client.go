@@ -9,14 +9,22 @@ import (
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
+	datatransfer "github.com/filecoin-project/go-data-transfer"
+	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
+	storageimpl "github.com/filecoin-project/go-fil-markets/storagemarket/impl"
+	"github.com/filecoin-project/go-fil-markets/storagemarket/impl/funds"
+	smnet "github.com/filecoin-project/go-fil-markets/storagemarket/network"
+	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/events"
 	"github.com/filecoin-project/lotus/chain/events/state"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/lotus/lib/sigs"
+	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/markets/utils"
+	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin"
 	"github.com/filecoin-project/specs-actors/actors/builtin/market"
@@ -26,7 +34,9 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/golang/glog"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
+	"time"
 )
 
 // This file implements StorageClientNode which is a client interface for making storage deals
@@ -48,6 +58,24 @@ type ClientNodeAdapter struct {
 type clientApi struct {
 	nodeapi.ChainAPI
 	nodeapi.StateAPI
+}
+
+type ClientDealFunds funds.DealFunds
+
+func StorageClient(h host.Host, ibs dtypes.ClientBlockstore, mds *multistore.MultiStore, dataTransfer datatransfer.Manager, discovery *discovery.Local, deals dtypes.ClientDatastore, scn storagemarket.StorageClientNode, dealFunds ClientDealFunds) (storagemarket.StorageClient, error) {
+	net := smnet.NewFromLibp2pHost(h)
+	c, err := storageimpl.NewClient(net, ibs, mds, dataTransfer, discovery, deals, scn, dealFunds, storageimpl.DealPollingInterval(time.Second))
+	if err != nil {
+		return nil, err
+	}
+
+	c.SubscribeToEvents(marketevents.StorageClientLogger)
+	err = c.Start(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	// defer c.Stop()
+	return c, nil
 }
 
 func NewStorageClientNode() storagemarket.StorageClientNode {

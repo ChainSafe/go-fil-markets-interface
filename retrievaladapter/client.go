@@ -6,13 +6,20 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/multiformats/go-multiaddr"
-
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
+	retrievalimpl "github.com/filecoin-project/go-fil-markets/retrievalmarket/impl"
+	rmnet "github.com/filecoin-project/go-fil-markets/retrievalmarket/network"
+	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
+	"github.com/filecoin-project/lotus/chain/types"
+	marketevents "github.com/filecoin-project/lotus/markets/loggers"
+	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
@@ -29,6 +36,21 @@ type ClientNodeAdapter struct {
 	nodeapi.ChainAPI
 	nodeapi.PaymentManager
 	nodeapi.StateAPI
+}
+
+func RetrievalClient(h host.Host, mds dtypes.ClientMultiDstore, dt dtypes.ClientDataTransfer, resolver retrievalmarket.PeerResolver, ds dtypes.MetadataDS, adapter retrievalmarket.RetrievalClientNode) (retrievalmarket.RetrievalClient, error) {
+	network := rmnet.NewFromLibp2pHost(h)
+	sc := storedcounter.New(ds, datastore.NewKey("/retr"))
+	client, err := retrievalimpl.NewClient(network, mds, dt, adapter, resolver, namespace.Wrap(ds, datastore.NewKey("/retrievals/client")), sc)
+	if err != nil {
+		return nil, err
+	}
+	client.SubscribeToEvents(marketevents.RetrievalClientLogger)
+	return client, nil
+}
+
+func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {
+	return &ClientNodeAdapter{}
 }
 
 func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalmarket.RetrievalPeer, tok shared.TipSetToken) ([]multiaddr.Multiaddr, error) {
@@ -50,10 +72,6 @@ func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalma
 	}
 
 	return multiaddrs, nil
-}
-
-func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {
-	return &ClientNodeAdapter{}
 }
 
 // GetChainHead gets the current chain head. Return its TipSetToken and its abi.ChainEpoch.
