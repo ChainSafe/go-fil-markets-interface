@@ -19,7 +19,7 @@ var serverAddr = flag.String("server", "/ip4/127.0.0.1/tcp/7070/http", "server a
 
 func Serve() error {
 	rpcServer := jsonrpc.NewServer()
-	rpcServer.Register("Market", &api.RpcServer{})
+	rpcServer.Register("Market", &api.API{})
 
 	ah := &auth.Handler{
 		Next: rpcServer.ServeHTTP,

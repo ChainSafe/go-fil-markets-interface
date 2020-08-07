@@ -61,3 +61,7 @@ func (s *StateAPI) StateGetReceipt(ctx context.Context, cid cid.Cid, tsk types.T
 func (s *StateAPI) StateGetActor(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error) {
 	return s.node.State.StateGetActor(ctx, actor, tsk)
 }
+
+func (s *StateAPI) StateDealProviderCollateralBounds(ctx context.Context, size abi.PaddedPieceSize, verified bool, tsk types.TipSetKey) (api.DealCollateralBounds, error) {
+	return s.node.State.StateDealProviderCollateralBounds(ctx, size, verified, tsk)
+}

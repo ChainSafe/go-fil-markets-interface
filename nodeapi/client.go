@@ -57,6 +57,7 @@ type Node struct {
 		StateMinerProvingDeadline func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error)
 		StateGetActor             func(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error)
 		StateGetReceipt           func(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
+		StateDealProviderCollateralBounds func(context.Context, abi.PaddedPieceSize, bool, types.TipSetKey) (api.DealCollateralBounds, error)
 	}
 	StateManager struct {
 		StateWaitMsg  func(ctx context.Context, mcid cid.Cid, confidence uint64) (*api.MsgLookup, error)

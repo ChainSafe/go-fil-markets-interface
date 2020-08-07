@@ -8,7 +8,8 @@ require (
 	github.com/filecoin-project/go-fil-markets v0.5.4
 	github.com/filecoin-project/go-jsonrpc v0.1.1-0.20200602181149-522144ab4e24
 	github.com/filecoin-project/go-multistore v0.0.3
-	github.com/filecoin-project/lotus v0.4.3-0.20200806144505-c6acfa624edb // indirect
+	github.com/filecoin-project/go-padreader v0.0.0-20200210211231-548257017ca6
+	github.com/filecoin-project/lotus v0.4.3-0.20200807081409-5a50d293b953
 	github.com/filecoin-project/sector-storage v0.0.0-20200805173933-deec7a2658d4
 	github.com/filecoin-project/specs-actors v0.8.7-0.20200805174427-9d42fb163883
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -36,3 +37,4 @@ require (
 )
 
 replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
+replace github.com/supranational/blst => github.com/supranational/blst v0.1.2-alpha.1

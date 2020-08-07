@@ -6,6 +6,8 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
+	"github.com/filecoin-project/lotus/chain/types"
+	"github.com/multiformats/go-multiaddr"
 
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/lotus/build"
@@ -26,6 +28,28 @@ type ClientNodeAdapter struct {
 
 	nodeapi.ChainAPI
 	nodeapi.PaymentManager
+	nodeapi.StateAPI
+}
+
+func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalmarket.RetrievalPeer, tok shared.TipSetToken) ([]multiaddr.Multiaddr, error) {
+	tsk, err := types.TipSetKeyFromBytes(tok)
+	if err != nil {
+		return nil, err
+	}
+	mi, err := c.StateMinerInfo(ctx, p.Address, tsk)
+	if err != nil {
+		return nil, err
+	}
+	multiaddrs := make([]multiaddr.Multiaddr, 0, len(mi.Multiaddrs))
+	for _, a := range mi.Multiaddrs {
+		maddr, err := multiaddr.NewMultiaddrBytes(a)
+		if err != nil {
+			return nil, err
+		}
+		multiaddrs = append(multiaddrs, maddr)
+	}
+
+	return multiaddrs, nil
 }
 
 func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {

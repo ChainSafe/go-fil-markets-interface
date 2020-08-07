@@ -26,7 +26,6 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/golang/glog"
 	"github.com/ipfs/go-cid"
-	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 )
 
@@ -55,6 +54,15 @@ func NewStorageClientNode() storagemarket.StorageClientNode {
 	return &ClientNodeAdapter{
 		ev: events.NewEvents(context.TODO(), &clientApi{nodeapi.ChainAPI{}, nodeapi.StateAPI{}}),
 	}
+}
+
+func (n *ClientNodeAdapter) DealProviderCollateralBounds(ctx context.Context, size abi.PaddedPieceSize, isVerified bool) (abi.TokenAmount, abi.TokenAmount, error) {
+	bounds, err := n.StateDealProviderCollateralBounds(ctx, size, isVerified, types.EmptyTSK)
+	if err != nil {
+		return abi.TokenAmount{}, abi.TokenAmount{}, err
+	}
+
+	return bounds.Min, bounds.Max, nil
 }
 
 func (n *ClientNodeAdapter) ListClientDeals(ctx context.Context, addr address.Address, encodedTs shared.TipSetToken) ([]storagemarket.StorageDeal, error) {
@@ -94,21 +102,12 @@ func (n *ClientNodeAdapter) ListStorageProviders(ctx context.Context, encodedTs 
 	var out []*storagemarket.StorageProviderInfo
 
 	for _, addr := range addresses {
-		mi, err := n.StateMinerInfo(ctx, addr, tsk)
+		mi, err := n.GetMinerInfo(ctx, addr, encodedTs)
 		if err != nil {
 			return nil, err
 		}
 
-		multiaddrs := make([]multiaddr.Multiaddr, 0, len(mi.Multiaddrs))
-		for _, a := range mi.Multiaddrs {
-			maddr, err := multiaddr.NewMultiaddrBytes(a)
-			if err != nil {
-				return nil, err
-			}
-			multiaddrs = append(multiaddrs, maddr)
-		}
-		storageProviderInfo := utils.NewStorageProviderInfo(addr, mi.Worker, mi.SectorSize, mi.PeerId, multiaddrs)
-		out = append(out, &storageProviderInfo)
+		out = append(out, mi)
 	}
 
 	return out, nil
@@ -253,15 +252,8 @@ func (n *ClientNodeAdapter) GetMinerInfo(ctx context.Context, maddr address.Addr
 	if err != nil {
 		return nil, err
 	}
-	multiaddrs := make([]multiaddr.Multiaddr, 0, len(mi.Multiaddrs))
-	for _, a := range mi.Multiaddrs {
-		maddr, err := multiaddr.NewMultiaddrBytes(a)
-		if err != nil {
-			return nil, err
-		}
-		multiaddrs = append(multiaddrs, maddr)
-	}
-	out := utils.NewStorageProviderInfo(maddr, mi.Worker, mi.SectorSize, mi.PeerId, multiaddrs)
+
+	out := utils.NewStorageProviderInfo(maddr, mi.Worker, mi.SectorSize, mi.PeerId, mi.Multiaddrs)
 	return &out, nil
 }
 
@@ -279,12 +271,10 @@ func (n *ClientNodeAdapter) GetChainHead(ctx context.Context) (shared.TipSetToke
 func (n *ClientNodeAdapter) AddFunds(ctx context.Context, addr address.Address, amount abi.TokenAmount) (cid.Cid, error) {
 	// (Provider Node API)
 	smsg, err := n.MpoolPushMessage(ctx, &types.Message{
-		To:       builtin.StorageMarketActorAddr,
-		From:     addr,
-		Value:    amount,
-		GasPrice: types.NewInt(0),
-		GasLimit: 1000000,
-		Method:   builtin.MethodsMarket.AddBalance,
+		To:     builtin.StorageMarketActorAddr,
+		From:   addr,
+		Value:  amount,
+		Method: builtin.MethodsMarket.AddBalance,
 	})
 	if err != nil {
 		return cid.Undef, err
@@ -394,49 +384,50 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 
 	var sectorNumber abi.SectorNumber
 	var sectorFound bool
-	matchEvent := func(msg *types.Message) (bool, error) {
+	matchEvent := func(msg *types.Message) (matchOnce bool, matched bool, err error) {
 		if msg.To != provider {
-			return false, nil
+			return true, false, nil
 		}
 
 		switch msg.Method {
 		case builtin.MethodsMiner.PreCommitSector:
 			var params miner.SectorPreCommitInfo
 			if err := params.UnmarshalCBOR(bytes.NewReader(msg.Params)); err != nil {
-				return false, xerrors.Errorf("unmarshal pre commit: %w", err)
+				return true, false, xerrors.Errorf("unmarshal pre commit: %w", err)
 			}
 
 			for _, did := range params.DealIDs {
 				if did == abi.DealID(dealID) {
 					sectorNumber = params.SectorNumber
 					sectorFound = true
-					return false, nil
+					return true, false, nil
 				}
 			}
 
-			return false, nil
+			return true, false, nil
 		case builtin.MethodsMiner.ProveCommitSector:
 			var params miner.ProveCommitSectorParams
 			if err := params.UnmarshalCBOR(bytes.NewReader(msg.Params)); err != nil {
-				return false, xerrors.Errorf("failed to unmarshal prove commit sector params: %w", err)
+				return true, false, xerrors.Errorf("failed to unmarshal prove commit sector params: %w", err)
 			}
 
 			if !sectorFound {
-				return false, nil
+				return true, false, nil
 			}
 
 			if params.SectorNumber != sectorNumber {
-				return false, nil
+				return true, false, nil
 			}
 
-			return true, nil
+			return false, true, nil
 		default:
-			return false, nil
+			return true, false, nil
 		}
 	}
 
-	// Use the callback accordingly based on events.
-	_, _, _, _ = checkFunc, called, matchEvent, revert
+	if err := n.ev.Called(checkFunc, called, revert, int(build.MessageConfidence+1), build.SealRandomnessLookbackLimit, matchEvent); err != nil {
+		return xerrors.Errorf("failed to set up called handler: %w", err)
+	}
 	return nil
 }
 
