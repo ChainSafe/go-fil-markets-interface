@@ -17,11 +17,11 @@ type PaymentManager struct {
 }
 
 func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error) {
-	return pm.node.PaymentManager.GetPaych(ctx, from, to, ensureFree)
+	return pm.node.PaymentManager.PaychGet(ctx, from, to, ensureFree)
 }
 
-func (pm *PaymentManager) AllocateLane(ch address.Address) (uint64, error) {
-	return pm.node.PaymentManager.AllocateLane(ch)
+func (pm *PaymentManager) AllocateLane(ctx context.Context, ch address.Address) (uint64, error) {
+	return pm.node.PaymentManager.PaychAllocateLane(ctx, ch)
 }
 
 // PaychVoucherCreate creates a new signed voucher on the given payment channel

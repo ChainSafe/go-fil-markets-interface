@@ -31,12 +31,12 @@ type Node struct {
 		ChainGetTipSet func(ctx context.Context, key types.TipSetKey) (*types.TipSet, error)
 	}
 	Mpool struct {
-		PushMessage     func(ctx context.Context, msg *types.Message) (*types.SignedMessage, error)
-		EnsureAvailable func(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error)
+		MpoolPushMessage      func(ctx context.Context, msg *types.Message) (*types.SignedMessage, error)
+		MarketEnsureAvailable func(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error)
 	}
 	PaymentManager struct {
-		GetPaych           func(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error)
-		AllocateLane       func(ch address.Address) (uint64, error)
+		PaychGet           func(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error)
+		PaychAllocateLane  func(ctx context.Context, ch address.Address) (uint64, error)
 		PaychVoucherCreate func(ctx context.Context, pch address.Address, amt types.BigInt, lane uint64) (*paych.SignedVoucher, error)
 	}
 	State struct {
@@ -52,21 +52,21 @@ type Node struct {
 		StateMinerProvingDeadline func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error)
 	}
 	StateManager struct {
-		WaitForMessage      func(ctx context.Context, mcid cid.Cid, confidence uint64) (*types.TipSet, *types.MessageReceipt, error)
-		ResolveToKeyAddress func(ctx context.Context, addr address.Address, ts *types.TipSet) (address.Address, error)
+		StateWaitMsg  func(ctx context.Context, mcid cid.Cid, confidence uint64) (*api.MsgLookup, error)
+		StateLookupID func(ctx context.Context, addr address.Address, ts types.TipSetKey) (address.Address, error)
 	}
 	ChainStore struct {
-		GetMessage        func(c cid.Cid) (*types.Message, error)
-		GetHeaviestTipSet func() *types.TipSet
+		ChainGetMessage func(ctx context.Context, c cid.Cid) (*types.Message, error)
+		ChainHead       func(ctx context.Context) *types.TipSet
 	}
 	Wallet struct {
-		Sign       func(ctx context.Context, addr address.Address, msg []byte) (*crypto.Signature, error)
-		GetDefault func() (address.Address, error)
-		HasKey     func(addr address.Address) (bool, error)
+		WalletSign           func(ctx context.Context, addr address.Address, msg []byte) (*crypto.Signature, error)
+		WalletDefaultAddress func(ctx context.Context) (address.Address, error)
+		WalletHas            func(ctx context.Context, addr address.Address) (bool, error)
 	}
 	Utils struct {
-		GetStorageDeal func(ctx context.Context, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error)
-		StateMinerInfo func(ctx context.Context, sm *StateManager, ts *types.TipSet, maddr address.Address) (miner.MinerInfo, error)
+		StateMarketStorageDeal func(ctx context.Context, dealID abi.DealID, ts types.TipSetKey) (*api.MarketDeal, error)
+		StateMinerInfo         func(ctx context.Context, addr address.Address, ts types.TipSetKey) (api.MinerInfo, error)
 	}
 }
 

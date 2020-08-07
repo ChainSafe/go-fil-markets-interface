@@ -15,13 +15,13 @@ type Wallet struct {
 }
 
 func (w *Wallet) Sign(ctx context.Context, addr address.Address, msg []byte) (*crypto.Signature, error) {
-	return w.node.Wallet.Sign(ctx, addr, msg)
+	return w.node.Wallet.WalletSign(ctx, addr, msg)
 }
 
 func (w *Wallet) GetDefault() (address.Address, error) {
-	return w.node.Wallet.GetDefault()
+	return w.node.Wallet.WalletDefaultAddress(context.TODO())
 }
 
 func (w *Wallet) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	return w.node.Wallet.HasKey(addr)
+	return w.node.Wallet.WalletHas(ctx, addr)
 }
