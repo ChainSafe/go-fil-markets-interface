@@ -18,38 +18,46 @@ type StateAPI struct {
 	node   *Node
 }
 
-func (a *StateAPI) StateMarketBalance(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error) {
-	return a.node.State.StateMarketBalance(ctx, addr, tsk)
+func (s *StateAPI) StateMarketBalance(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error) {
+	return s.node.State.StateMarketBalance(ctx, addr, tsk)
 }
 
-func (a *StateAPI) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
-	return a.node.State.StateAccountKey(ctx, addr, tsk)
+func (s *StateAPI) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
+	return s.node.State.StateAccountKey(ctx, addr, tsk)
 }
 
-func (a *StateAPI) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {
-	return a.node.State.StateWaitMsg(ctx, msg, confidence)
+func (s *StateAPI) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {
+	return s.node.State.StateWaitMsg(ctx, msg, confidence)
 }
 
-func (a *StateAPI) StateMarketDeals(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error) {
-	return a.node.State.StateMarketDeals(ctx, tsk)
+func (s *StateAPI) StateMarketDeals(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error) {
+	return s.node.State.StateMarketDeals(ctx, tsk)
 }
 
-func (a *StateAPI) StateListMiners(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error) {
-	return a.node.State.StateListMiners(ctx, tsk)
+func (s *StateAPI) StateListMiners(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error) {
+	return s.node.State.StateListMiners(ctx, tsk)
 }
 
-func (a *StateAPI) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error) {
-	return a.node.State.StateMinerInfo(ctx, actor, tsk)
+func (s *StateAPI) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error) {
+	return s.node.State.StateMinerInfo(ctx, actor, tsk)
 }
 
-func (a *StateAPI) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
-	return a.node.State.StateLookupID(ctx, addr, tsk)
+func (s *StateAPI) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
+	return s.node.State.StateLookupID(ctx, addr, tsk)
 }
 
-func (a *StateAPI) StateMarketStorageDeal(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error) {
-	return a.node.State.StateMarketStorageDeal(ctx, dealId, tsk)
+func (s *StateAPI) StateMarketStorageDeal(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error) {
+	return s.node.State.StateMarketStorageDeal(ctx, dealId, tsk)
 }
 
-func (a *StateAPI) StateMinerProvingDeadline(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error) {
-	return a.node.State.StateMinerProvingDeadline(ctx, addr, tsk)
+func (s *StateAPI) StateMinerProvingDeadline(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error) {
+	return s.node.State.StateMinerProvingDeadline(ctx, addr, tsk)
+}
+
+func (s *StateAPI) StateGetReceipt(ctx context.Context, cid cid.Cid, tsk types.TipSetKey) (*types.MessageReceipt, error) {
+	return s.node.State.StateGetReceipt(ctx, cid, tsk)
+}
+
+func (s *StateAPI) StateGetActor(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error) {
+	return s.node.State.StateGetActor(ctx, actor, tsk)
 }
