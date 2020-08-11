@@ -6,33 +6,31 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
+	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	retrievalimpl "github.com/filecoin-project/go-fil-markets/retrievalmarket/impl"
 	rmnet "github.com/filecoin-project/go-fil-markets/retrievalmarket/network"
+	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/types"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
+	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
-
-	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-fil-markets/shared"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
-	"github.com/ipfs/go-cid"
 )
 
 type ClientNodeAdapter struct {
-	sm *nodeapi.StateManager
-
+	nodeapi.StateManager
 	nodeapi.ChainAPI
 	nodeapi.PaymentManager
 	nodeapi.StateAPI
@@ -112,7 +110,7 @@ func (c *ClientNodeAdapter) CreatePaymentVoucher(ctx context.Context, paymentCha
 // WaitForPaymentChannelAddFunds waits messageCID to appear on chain. If it doesn't appear within
 // defaultMsgWaitTimeout it returns error
 func (c *ClientNodeAdapter) WaitForPaymentChannelAddFunds(messageCID cid.Cid) error {
-	_, mr, err := c.sm.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
+	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
 
 	if err != nil {
 		return err
@@ -125,7 +123,7 @@ func (c *ClientNodeAdapter) WaitForPaymentChannelAddFunds(messageCID cid.Cid) er
 
 // WaitForPaymentChannelCreation waits for a message on chain with CID messageCID that a payment channel has been created.
 func (c *ClientNodeAdapter) WaitForPaymentChannelCreation(messageCID cid.Cid) (address.Address, error) {
-	_, mr, err := c.sm.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
+	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
 
 	if err != nil {
 		return address.Undef, err
