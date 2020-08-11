@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/ChainSafe/go-fil-markets-interface/config"
-
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
