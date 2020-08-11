@@ -78,7 +78,7 @@ type Node struct {
 	}
 }
 
-func NewNodeClient(addr string, requestHeader http.Header) (*Node, jsonrpc.ClientCloser, error) {
+func NewNodeClient(addr string, requestHeader http.Header) (Node, jsonrpc.ClientCloser, error) {
 	var node Node
 	closer, err := jsonrpc.NewMergeClient(addr, "MarketInterface",
 		[]interface{}{
@@ -92,13 +92,13 @@ func NewNodeClient(addr string, requestHeader http.Header) (*Node, jsonrpc.Clien
 			&node.Utils,
 		},
 		requestHeader)
-	return &node, closer, err
+	return node, closer, err
 }
 
-func GetNodeAPI(ctx *cli.Context) (*Node, jsonrpc.ClientCloser, error) {
+func GetNodeAPI(ctx *cli.Context) (Node, jsonrpc.ClientCloser, error) {
 	addr, err := config.Api.Node.DialArgs()
 	if err != nil {
-		return nil, nil, err
+		return Node{}, nil, err
 	}
 	return NewNodeClient(addr, utils.AuthHeader(string(config.Api.Node.Token)))
 }

@@ -12,7 +12,7 @@ import (
 )
 
 type StateManager struct {
-	node *Node
+	node Node
 	cs   ChainAPI
 }
 

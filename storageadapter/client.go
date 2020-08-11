@@ -43,15 +43,14 @@ import (
 // with a StorageProvider
 
 type ClientNodeAdapter struct {
-	cs *nodeapi.ChainStore
-	sm *nodeapi.StateManager
-
+	nodeapi.ChainStore
+	nodeapi.StateManager
 	nodeapi.ChainAPI
 	nodeapi.MpoolAPI
 	nodeapi.StateAPI
 	nodeapi.ApiBStore
 
-	node *nodeapi.Node
+	node nodeapi.Node
 	ev   *events.Events
 }
 
@@ -146,12 +145,12 @@ func (n *ClientNodeAdapter) ListStorageProviders(ctx context.Context, encodedTs 
 func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal storagemarket.ClientDeal) (abi.DealID, error) {
 	glog.Info("DEAL ACCEPTED!")
 
-	pubmsg, err := n.cs.GetMessage(*deal.PublishMessage)
+	pubmsg, err := n.GetMessage(*deal.PublishMessage)
 	if err != nil {
 		return 0, xerrors.Errorf("getting deal pubsish message: %w", err)
 	}
 
-	mi, err := nodeapi.StateMinerInfo(ctx, n.node, n.cs.GetHeaviestTipSet(), deal.Proposal.Provider)
+	mi, err := nodeapi.StateMinerInfo(ctx, n.node, n.GetHeaviestTipSet(), deal.Proposal.Provider)
 	if err != nil {
 		return 0, xerrors.Errorf("getting miner worker failed: %w", err)
 	}
@@ -197,7 +196,7 @@ func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal stor
 	}
 
 	// TODO: timeout
-	_, ret, err := n.sm.WaitForMessage(ctx, *deal.PublishMessage, build.MessageConfidence)
+	_, ret, err := n.StateManager.WaitForMessage(ctx, *deal.PublishMessage, build.MessageConfidence)
 	if err != nil {
 		return 0, xerrors.Errorf("waiting for deal publish message: %w", err)
 	}
@@ -261,7 +260,7 @@ func (n *ClientNodeAdapter) ValidateAskSignature(ctx context.Context, ask *stora
 		return false, xerrors.Errorf("failed to load tipset")
 	}
 
-	m, err := n.sm.ResolveToKeyAddress(ctx, mi.Worker, ts)
+	m, err := n.ResolveToKeyAddress(ctx, mi.Worker, ts)
 
 	if err != nil {
 		return false, xerrors.Errorf("failed to resolve miner to key address")

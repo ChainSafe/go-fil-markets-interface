@@ -28,6 +28,9 @@ import (
 )
 
 func TestNewRetrievalClientNode(t *testing.T) {
+	t.Skip() // Skipping as of now.
+	// Either user Real server or Mock server implementation to test this.
+
 	ctx := context.Background()
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 )
 
 type ChainAPI struct {
-	node *Node
+	node Node
 }
 
 func (c *ChainAPI) ChainHead(ctx context.Context) (*types.TipSet, error) {
@@ -36,7 +36,7 @@ func (c *ChainAPI) ChainGetTipSetByHeight(ctx context.Context, e abi.ChainEpoch,
 }
 
 type ApiBStore struct {
-	node *Node
+	node Node
 }
 
 func (a *ApiBStore) ChainReadObj(ctx context.Context, c cid.Cid) ([]byte, error) {

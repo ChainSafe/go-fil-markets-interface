@@ -12,7 +12,7 @@ import (
 )
 
 type MpoolAPI struct {
-	node *Node
+	node Node
 }
 
 func (a *MpoolAPI) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
