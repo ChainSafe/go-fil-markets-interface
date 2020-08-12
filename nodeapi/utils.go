@@ -13,9 +13,9 @@ import (
 )
 
 func GetStorageDeal(ctx context.Context, client Node, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
-	return client.Utils.StateMarketStorageDeal(ctx, dealID, ts.Key())
+	return NodeClient.UtilsAPI.StateMarketStorageDeal(ctx, dealID, ts.Key())
 }
 
 func StateMinerInfo(ctx context.Context, client Node, ts *types.TipSet, maddr address.Address) (api.MinerInfo, error) {
-	return client.Utils.StateMinerInfo(ctx, maddr, ts.Key())
+	return NodeClient.UtilsAPI.StateMinerInfo(ctx, maddr, ts.Key())
 }

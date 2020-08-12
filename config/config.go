@@ -16,7 +16,7 @@ var (
 	marketAPIInfo = "MARKET_API_INFO"
 	tokenKey      = "Token"
 	AddrKey       = "Addr"
-	Api           API
+	Api           API // TODO(arijit): Remove it from global vars.
 )
 
 type APIInfo struct {

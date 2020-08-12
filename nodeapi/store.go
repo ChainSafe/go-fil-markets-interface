@@ -9,14 +9,12 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type ChainStore struct {
-	node Node
-}
+type ChainStore struct{}
 
 func (cs *ChainStore) GetMessage(c cid.Cid) (*types.Message, error) {
-	return cs.node.ChainStore.ChainGetMessage(context.TODO(), c)
+	return NodeClient.ChainStoreAPI.ChainGetMessage(context.TODO(), c)
 }
 
 func (cs *ChainStore) GetHeaviestTipSet() *types.TipSet {
-	return cs.node.ChainStore.ChainHead(context.TODO())
+	return NodeClient.ChainStoreAPI.ChainHead(context.TODO())
 }

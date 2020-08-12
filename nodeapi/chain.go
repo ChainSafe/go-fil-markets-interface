@@ -11,28 +11,26 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type ChainAPI struct {
-	node Node
+type Chain struct{}
+
+func (c *Chain) ChainHead(ctx context.Context) (*types.TipSet, error) {
+	return NodeClient.ChainAPI.ChainHead(ctx)
 }
 
-func (c *ChainAPI) ChainHead(ctx context.Context) (*types.TipSet, error) {
-	return c.node.Chain.ChainHead(ctx)
+func (c *Chain) ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error) {
+	return NodeClient.ChainAPI.ChainGetTipSet(ctx, key)
 }
 
-func (c *ChainAPI) ChainGetTipSet(ctx context.Context, key types.TipSetKey) (*types.TipSet, error) {
-	return c.node.Chain.ChainGetTipSet(ctx, key)
+func (c *Chain) ChainNotify(ctx context.Context) (<-chan []*api.HeadChange, error) {
+	return NodeClient.ChainAPI.ChainNotify(ctx)
 }
 
-func (c *ChainAPI) ChainNotify(ctx context.Context) (<-chan []*api.HeadChange, error) {
-	return c.node.Chain.ChainNotify(ctx)
+func (c *Chain) ChainGetBlockMessages(ctx context.Context, blockCid cid.Cid) (*api.BlockMessages, error) {
+	return NodeClient.ChainAPI.ChainGetBlockMessages(ctx, blockCid)
 }
 
-func (c *ChainAPI) ChainGetBlockMessages(ctx context.Context, blockCid cid.Cid) (*api.BlockMessages, error) {
-	return c.node.Chain.ChainGetBlockMessages(ctx, blockCid)
-}
-
-func (c *ChainAPI) ChainGetTipSetByHeight(ctx context.Context, e abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
-	return c.node.Chain.ChainGetTipSetByHeight(ctx, e, tsk)
+func (c *Chain) ChainGetTipSetByHeight(ctx context.Context, e abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
+	return NodeClient.ChainAPI.ChainGetTipSetByHeight(ctx, e, tsk)
 }
 
 type ApiBStore struct {
@@ -40,9 +38,9 @@ type ApiBStore struct {
 }
 
 func (a *ApiBStore) ChainReadObj(ctx context.Context, c cid.Cid) ([]byte, error) {
-	return a.node.Chain.ChainReadObj(ctx, c)
+	return a.node.ChainAPI.ChainReadObj(ctx, c)
 }
 
 func (a *ApiBStore) ChainHasObj(ctx context.Context, c cid.Cid) (bool, error) {
-	return a.node.Chain.ChainHasObj(ctx, c)
+	return a.node.ChainAPI.ChainHasObj(ctx, c)
 }

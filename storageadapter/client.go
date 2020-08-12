@@ -6,10 +6,18 @@ package storageadapter
 import (
 	"bytes"
 	"context"
+	"errors"
+	"io"
+	"time"
+
+	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
+	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
+	dtnet "github.com/filecoin-project/go-data-transfer/network"
+	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
@@ -17,10 +25,12 @@ import (
 	"github.com/filecoin-project/go-fil-markets/storagemarket/impl/funds"
 	smnet "github.com/filecoin-project/go-fil-markets/storagemarket/network"
 	"github.com/filecoin-project/go-multistore"
+	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/events"
 	"github.com/filecoin-project/lotus/chain/events/state"
 	"github.com/filecoin-project/lotus/chain/types"
+	bstore "github.com/filecoin-project/lotus/lib/blockstore"
 	"github.com/filecoin-project/lotus/lib/sigs"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/markets/utils"
@@ -33,10 +43,19 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/golang/glog"
+	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	dss "github.com/ipfs/go-datastore/sync"
+	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
+	"github.com/ipfs/go-graphsync/network"
+	"github.com/ipld/go-ipld-prime"
+	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
+	"github.com/libp2p/go-libp2p"
+	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
-	"time"
 )
 
 // This file implements StorageClientNode which is a client interface for making storage deals
@@ -45,21 +64,106 @@ import (
 type ClientNodeAdapter struct {
 	nodeapi.ChainStore
 	nodeapi.StateManager
-	nodeapi.ChainAPI
-	nodeapi.MpoolAPI
-	nodeapi.StateAPI
+	nodeapi.Chain
+	nodeapi.Mpool
+	nodeapi.State
 	nodeapi.ApiBStore
+	nodeapi.Wallet
 
 	node nodeapi.Node
 	ev   *events.Events
 }
 
 type clientApi struct {
-	nodeapi.ChainAPI
-	nodeapi.StateAPI
+	nodeapi.Chain
+	nodeapi.State
 }
 
 type ClientDealFunds funds.DealFunds
+
+func InitStorageClient(nodeClient *nodeapi.Node) (storagemarket.StorageClient, error) {
+	ctx := context.Background()
+	priv, _, err := p2pcrypto.GenerateKeyPair(p2pcrypto.RSA, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []libp2p.Option{
+		libp2p.ListenAddrs(config.Api.Node.Addr),
+		libp2p.Identity(priv),
+		libp2p.DefaultTransports,
+		libp2p.DefaultMuxers,
+		libp2p.DefaultSecurity,
+		libp2p.NATPortMap(),
+	}
+	h, err := libp2p.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	ds := dss.MutexWrap(datastore.NewMapDatastore())
+	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
+	mds, err := multistore.NewMultiDstore(ds)
+	if err != nil {
+		return nil, err
+	}
+
+	scn := NewStorageClientNode()
+
+	clientDealFunds, err := funds.NewDealFunds(ds, datastore.NewKey("storage/client/dealfunds"))
+	if err != nil {
+		return nil, err
+	}
+
+	storedCounter := storedcounter.New(ds, datastore.NewKey("counter"))
+
+	makeLoader := func(bs bstore.Blockstore) ipld.Loader {
+		return func(lnk ipld.Link, lnkCtx ipld.LinkContext) (io.Reader, error) {
+			c, ok := lnk.(cidlink.Link)
+			if !ok {
+				return nil, errors.New("incorrect Link Type")
+			}
+			// read block from one store
+			block, err := bs.Get(c.Cid)
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(block.RawData()), nil
+		}
+	}
+
+	makeStorer := func(bs bstore.Blockstore) ipld.Storer {
+		return func(lnkCtx ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
+			var buf bytes.Buffer
+			var committer ipld.StoreCommitter = func(lnk ipld.Link) error {
+				c, ok := lnk.(cidlink.Link)
+				if !ok {
+					return errors.New("incorrect Link Type")
+				}
+				block, err := blocks.NewBlockWithCid(buf.Bytes(), c.Cid)
+				if err != nil {
+					return err
+				}
+				return bs.Put(block)
+			}
+			return &buf, committer, nil
+		}
+	}
+
+	graphSync := graphsyncimpl.New(ctx, network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	transport := dtgstransport.NewTransport(h.ID(), graphSync)
+	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
+	if err != nil {
+		return nil, err
+	}
+
+	peerResolver := discovery.NewLocal(ds)
+	storageClient, err := StorageClient(h, bs, mds, dt, peerResolver, ds, scn, clientDealFunds)
+	if err != nil {
+		return nil, err
+	}
+	return storageClient, nil
+}
 
 func StorageClient(h host.Host, ibs dtypes.ClientBlockstore, mds *multistore.MultiStore, dataTransfer datatransfer.Manager, discovery *discovery.Local, deals dtypes.ClientDatastore, scn storagemarket.StorageClientNode, dealFunds ClientDealFunds) (storagemarket.StorageClient, error) {
 	net := smnet.NewFromLibp2pHost(h)
@@ -73,13 +177,12 @@ func StorageClient(h host.Host, ibs dtypes.ClientBlockstore, mds *multistore.Mul
 	if err != nil {
 		return nil, err
 	}
-	// defer c.Stop()
 	return c, nil
 }
 
 func NewStorageClientNode() storagemarket.StorageClientNode {
 	return &ClientNodeAdapter{
-		ev: events.NewEvents(context.TODO(), &clientApi{nodeapi.ChainAPI{}, nodeapi.StateAPI{}}),
+		ev: events.NewEvents(context.TODO(), &clientApi{nodeapi.Chain{}, nodeapi.State{}}),
 	}
 }
 

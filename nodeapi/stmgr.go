@@ -11,18 +11,15 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type StateManager struct {
-	node Node
-	cs   ChainAPI
-}
+type StateManager struct{}
 
 func (sm *StateManager) WaitForMessage(ctx context.Context, mcid cid.Cid, confidence uint64) (*types.TipSet, *types.MessageReceipt, error) {
-	msg, err := sm.node.StateManager.StateWaitMsg(ctx, mcid, confidence)
+	msg, err := NodeClient.StateManagerAPI.StateWaitMsg(ctx, mcid, confidence)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tipSet, err := sm.cs.ChainGetTipSet(context.TODO(), msg.TipSet)
+	tipSet, err := NodeClient.ChainGetTipSet(context.TODO(), msg.TipSet)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -30,5 +27,5 @@ func (sm *StateManager) WaitForMessage(ctx context.Context, mcid cid.Cid, confid
 }
 
 func (sm *StateManager) ResolveToKeyAddress(ctx context.Context, addr address.Address, ts *types.TipSet) (address.Address, error) {
-	return sm.node.StateManager.StateLookupID(ctx, addr, ts.Key())
+	return NodeClient.StateManagerAPI.StateLookupID(ctx, addr, ts.Key())
 }

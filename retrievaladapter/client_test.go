@@ -99,5 +99,4 @@ func TestNewRetrievalClientNode(t *testing.T) {
 	rcn := NewRetrievalClientNode()
 	_, err = RetrievalClient(h, mds, dt, peerResolver, ds, rcn)
 	require.NoError(t, err)
-
 }

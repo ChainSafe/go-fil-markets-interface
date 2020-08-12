@@ -17,7 +17,6 @@ import (
 	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/chain/store"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/lotus/markets/utils"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
@@ -43,7 +42,6 @@ import (
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/libp2p/go-libp2p-core/peer"
 	mh "github.com/multiformats/go-multihash"
-	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 	"io"
 	"os"
@@ -54,17 +52,14 @@ var DefaultHashFunction = uint64(mh.BLAKE2B_MIN + 31)
 const dealStartBufferHours uint64 = 24
 
 type API struct {
-	fx.In
-
-	nodeapi.ChainAPI
-	nodeapi.StateAPI
+	nodeapi.Chain
+	nodeapi.State
 	nodeapi.Wallet
 	nodeapi.PaymentManager
 
 	SMDealClient storagemarket.StorageClient
 	RetDiscovery rm.PeerResolver
 	Retrieval    rm.RetrievalClient
-	Chain        *store.ChainStore
 
 	Imports dtypes.ClientImportMgr
 

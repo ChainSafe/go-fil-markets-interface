@@ -10,18 +10,16 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 )
 
-type Wallet struct {
-	node Node
-}
+type Wallet struct{}
 
 func (w *Wallet) Sign(ctx context.Context, addr address.Address, msg []byte) (*crypto.Signature, error) {
-	return w.node.Wallet.WalletSign(ctx, addr, msg)
+	return NodeClient.WalletAPI.WalletSign(ctx, addr, msg)
 }
 
 func (w *Wallet) GetDefault() (address.Address, error) {
-	return w.node.Wallet.WalletDefaultAddress(context.TODO())
+	return NodeClient.WalletAPI.WalletDefaultAddress(context.TODO())
 }
 
 func (w *Wallet) WalletHas(ctx context.Context, addr address.Address) (bool, error) {
-	return w.node.Wallet.WalletHas(ctx, addr)
+	return NodeClient.WalletAPI.WalletHas(ctx, addr)
 }
