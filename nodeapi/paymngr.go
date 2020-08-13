@@ -5,18 +5,16 @@ package nodeapi
 
 import (
 	"context"
-	"github.com/ipfs/go-cid"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
 )
 
 type PaymentManager struct{}
 
-func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (address.Address, cid.Cid, error) {
-	chanIndo, err := NodeClient.PaymentManagerAPI.PaychGet(ctx, from, to, ensureFree)
-	return chanIndo.Channel, chanIndo.ChannelMessage, err
+func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (*api.ChannelInfo, error) {
+	return NodeClient.PaymentManagerAPI.PaychGet(ctx, from, to, ensureFree)
 }
 
 func (pm *PaymentManager) AllocateLane(ctx context.Context, ch address.Address) (uint64, error) {
