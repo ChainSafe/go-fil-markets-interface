@@ -4,9 +4,8 @@
 package rpc
 
 import (
-	"flag"
 	"fmt"
-	"log"
+	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"net/http"
 
 	"github.com/ChainSafe/go-fil-markets-interface/api"
@@ -22,11 +21,8 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	dss "github.com/ipfs/go-datastore/sync"
-	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
 )
-
-var serverAddr = flag.String("server", "/ip4/127.0.0.1/tcp/7070/http", "server address")
 
 func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient) error {
 	rpcServer := jsonrpc.NewServer()
@@ -53,16 +49,11 @@ func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalm
 		Next: rpcServer.ServeHTTP,
 	}
 
-	http.Handle("/rpc/market/v0/", ah)
+	http.Handle("/rpc/v0", ah)
 
-	maddr, err := multiaddr.NewMultiaddr(*serverAddr)
+	lst, err := manet.Listen(config.Api.Market.Addr)
 	if err != nil {
-		log.Fatalf("failed to construct multiaddr: %s %v", maddr, err)
-	}
-
-	lst, err := manet.Listen(maddr)
-	if err != nil {
-		return fmt.Errorf("could not listen: %w", err)
+		return fmt.Errorf("could not listen: %v", err)
 	}
 
 	srv := &http.Server{Handler: http.DefaultServeMux}

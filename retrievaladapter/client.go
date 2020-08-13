@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"github.com/ipfs/go-graphsync/network"
 	"io"
 
@@ -62,7 +61,7 @@ func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
 	}
 
 	opts := []libp2p.Option{
-		libp2p.ListenAddrs(config.Api.Market.Addr),
+		// libp2p.ListenAddrs(config.Api.Market.Addr),
 		libp2p.Identity(priv),
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,

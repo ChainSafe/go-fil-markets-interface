@@ -38,7 +38,7 @@ func main() {
 	}
 
 	if err := rpc.Serve(storageClient, retrievalClient); err != nil {
-		log.Fatalf("Error while setting up the server.")
+		log.Fatalf("Error while setting up the server %s.", err)
 	}
 
 	sdCh := make(chan os.Signal, 1)

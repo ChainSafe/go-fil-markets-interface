@@ -37,7 +37,7 @@ type Market struct {
 
 func NewMarketClient(addr string, requestHeader http.Header) (*Market, jsonrpc.ClientCloser, error) {
 	var market Market
-	closer, err := jsonrpc.NewMergeClient(addr, "MarketInterface",
+	closer, err := jsonrpc.NewMergeClient(addr, "Market",
 		[]interface{}{
 			&market,
 		},
