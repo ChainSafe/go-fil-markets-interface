@@ -5,6 +5,7 @@ package nodeapi
 
 import (
 	"context"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"net/http"
 
 	"github.com/ChainSafe/go-fil-markets-interface/config"
@@ -81,6 +82,7 @@ type WalletAPI struct {
 type UtilsAPI struct {
 	StateMarketStorageDeal func(ctx context.Context, dealID abi.DealID, ts types.TipSetKey) (*api.MarketDeal, error)
 	StateMinerInfo         func(ctx context.Context, addr address.Address, ts types.TipSetKey) (api.MinerInfo, error)
+	NetFindPeer            func(context.Context, peer.ID) (peer.AddrInfo, error)
 }
 
 type Node struct {

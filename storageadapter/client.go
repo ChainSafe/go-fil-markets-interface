@@ -7,10 +7,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/multiformats/go-multiaddr"
 	"io"
 	"time"
 
-	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -55,6 +55,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
+	peerstore "github.com/libp2p/go-libp2p-core/peer"
 	"golang.org/x/xerrors"
 )
 
@@ -89,7 +90,7 @@ func InitStorageClient(nodeClient *nodeapi.Node) (storagemarket.StorageClient, e
 	}
 
 	opts := []libp2p.Option{
-		libp2p.ListenAddrs(config.Api.Node.Addr),
+		// libp2p.ListenAddrs(config.Api.Node.Addr),
 		libp2p.Identity(priv),
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,
@@ -97,6 +98,17 @@ func InitStorageClient(nodeClient *nodeapi.Node) (storagemarket.StorageClient, e
 		libp2p.NATPortMap(),
 	}
 	h, err := libp2p.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	ipfsMaddr := "/ip4/172.17.0.2/tcp/0/p2p/12D3KooWGREEZtKQvFyAqAHHb3Vz35MaNqLP8ZKMfBjdWuYXNGjh"
+	ma, err := multiaddr.NewMultiaddr(ipfsMaddr)
+	if err != nil {
+		return nil, xerrors.Errorf("parsing ipfs multiaddr: %w", err)
+	}
+
+	_, err = peerstore.AddrInfoFromP2pAddr(ma)
 	if err != nil {
 		return nil, err
 	}
