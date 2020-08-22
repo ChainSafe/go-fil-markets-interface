@@ -27,5 +27,5 @@ func (sm *StateManager) WaitForMessage(ctx context.Context, mcid cid.Cid, confid
 }
 
 func (sm *StateManager) ResolveToKeyAddress(ctx context.Context, addr address.Address, ts *types.TipSet) (address.Address, error) {
-	return NodeClient.StateManagerAPI.StateLookupID(ctx, addr, ts.Key())
+	return NodeClient.StateManagerAPI.StateAccountKey(ctx, addr, ts.Key())
 }

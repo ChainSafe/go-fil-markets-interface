@@ -62,7 +62,6 @@ func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
 	}
 
 	opts := []libp2p.Option{
-		// libp2p.ListenAddrs(config.Api.Market.Addr),
 		libp2p.Identity(priv),
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,
@@ -74,7 +73,7 @@ func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
 		return nil, err
 	}
 
-	ipfsMaddr := "/ip4/172.17.0.2/tcp/0/p2p/12D3KooWGREEZtKQvFyAqAHHb3Vz35MaNqLP8ZKMfBjdWuYXNGjh"
+	ipfsMaddr := "/ip4/172.17.0.2/tcp/4001/p2p/12D3KooWFJ8Dqhi5D3bfTJZW7Hskc6gWFnFiyCp1qBoyoYWZ1yPK"
 	ma, err := multiaddr.NewMultiaddr(ipfsMaddr)
 	if err != nil {
 		return nil, xerrors.Errorf("parsing ipfs multiaddr: %w", err)

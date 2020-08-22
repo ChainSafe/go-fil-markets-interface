@@ -64,8 +64,8 @@ type StateAPI struct {
 }
 
 type StateManagerAPI struct {
-	StateWaitMsg  func(ctx context.Context, mcid cid.Cid, confidence uint64) (*api.MsgLookup, error)
-	StateLookupID func(ctx context.Context, addr address.Address, ts types.TipSetKey) (address.Address, error)
+	StateWaitMsg    func(ctx context.Context, mcid cid.Cid, confidence uint64) (*api.MsgLookup, error)
+	StateAccountKey func(ctx context.Context, addr address.Address, ts types.TipSetKey) (address.Address, error)
 }
 
 type ChainStoreAPI struct {

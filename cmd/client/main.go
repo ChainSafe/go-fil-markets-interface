@@ -196,6 +196,12 @@ var clientDealCmd = &cli.Command{
 		&CidBaseFlag,
 	},
 	Action: func(cctx *cli.Context) error {
+		nodeapi, nodeCloser, err := nodeapi.GetNodeAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer nodeCloser()
+
 		api, closer, err := client.GetMarketAPI(cctx)
 		if err != nil {
 			return err
@@ -230,14 +236,18 @@ var clientDealCmd = &cli.Command{
 		}
 
 		var a address.Address
-		if from := cctx.String("from"); from == "" {
+		if from := cctx.String("from"); from != "" {
 			faddr, err := address.NewFromString(from)
 			if err != nil {
 				return xerrors.Errorf("failed to parse 'from' address: %w", err)
 			}
 			a = faddr
 		} else {
-			return xerrors.Errorf("'from' address is not provided")
+			def, err := nodeapi.WalletDefaultAddress(ctx)
+			if err != nil {
+				return err
+			}
+			a = def
 		}
 
 		ref := &storagemarket.DataRef{
