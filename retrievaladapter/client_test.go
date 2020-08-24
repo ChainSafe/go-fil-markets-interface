@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
 	dtnet "github.com/filecoin-project/go-data-transfer/network"
 	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
@@ -38,9 +37,7 @@ func TestNewRetrievalClientNode(t *testing.T) {
 	}
 
 	// Node IP and port
-	port := 7777
 	opts := []libp2p.Option{
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port)),
 		libp2p.Identity(priv),
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,

@@ -42,7 +42,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	peerstore "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 )
@@ -69,17 +68,6 @@ func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
 		libp2p.NATPortMap(),
 	}
 	h, err := libp2p.New(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	ipfsMaddr := "/ip4/172.17.0.2/tcp/4001/p2p/12D3KooWFJ8Dqhi5D3bfTJZW7Hskc6gWFnFiyCp1qBoyoYWZ1yPK"
-	ma, err := multiaddr.NewMultiaddr(ipfsMaddr)
-	if err != nil {
-		return nil, xerrors.Errorf("parsing ipfs multiaddr: %w", err)
-	}
-
-	_, err = peerstore.AddrInfosFromP2pAddrs(ma)
 	if err != nil {
 		return nil, err
 	}
