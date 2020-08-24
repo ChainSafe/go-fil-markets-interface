@@ -6,29 +6,143 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/multiformats/go-multiaddr"
-
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	"github.com/filecoin-project/lotus/build"
-	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
-	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
-	"golang.org/x/xerrors"
+	"errors"
+	"github.com/ipfs/go-graphsync/network"
+	"io"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
+	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
+	dtnet "github.com/filecoin-project/go-data-transfer/network"
+	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
+	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
+	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
+	retrievalimpl "github.com/filecoin-project/go-fil-markets/retrievalmarket/impl"
+	rmnet "github.com/filecoin-project/go-fil-markets/retrievalmarket/network"
 	"github.com/filecoin-project/go-fil-markets/shared"
+	"github.com/filecoin-project/go-multistore"
+	"github.com/filecoin-project/go-storedcounter"
+	"github.com/filecoin-project/lotus/build"
+	"github.com/filecoin-project/lotus/chain/types"
+	bstore "github.com/filecoin-project/lotus/lib/blockstore"
+	marketevents "github.com/filecoin-project/lotus/markets/loggers"
+	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
+	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
+	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	dss "github.com/ipfs/go-datastore/sync"
+	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
+	"github.com/ipld/go-ipld-prime"
+	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/multiformats/go-multiaddr"
+	"golang.org/x/xerrors"
 )
 
 type ClientNodeAdapter struct {
-	sm *nodeapi.StateManager
-
-	nodeapi.ChainAPI
+	nodeapi.StateManager
+	nodeapi.Chain
 	nodeapi.PaymentManager
-	nodeapi.StateAPI
+	nodeapi.State
+}
+
+func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
+	ctx := context.Background()
+	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []libp2p.Option{
+		libp2p.Identity(priv),
+		libp2p.DefaultTransports,
+		libp2p.DefaultMuxers,
+		libp2p.DefaultSecurity,
+		libp2p.NATPortMap(),
+	}
+	h, err := libp2p.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	ds := dss.MutexWrap(datastore.NewMapDatastore())
+	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
+	mds, err := multistore.NewMultiDstore(ds)
+	if err != nil {
+		return nil, err
+	}
+
+	storedCounter := storedcounter.New(ds, datastore.NewKey("counter"))
+
+	makeLoader := func(bs bstore.Blockstore) ipld.Loader {
+		return func(lnk ipld.Link, lnkCtx ipld.LinkContext) (io.Reader, error) {
+			c, ok := lnk.(cidlink.Link)
+			if !ok {
+				return nil, errors.New("incorrect Link Type")
+			}
+			// read block from one store
+			block, err := bs.Get(c.Cid)
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(block.RawData()), nil
+		}
+	}
+
+	makeStorer := func(bs bstore.Blockstore) ipld.Storer {
+		return func(lnkCtx ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
+			var buf bytes.Buffer
+			var committer ipld.StoreCommitter = func(lnk ipld.Link) error {
+				c, ok := lnk.(cidlink.Link)
+				if !ok {
+					return errors.New("incorrect Link Type")
+				}
+				block, err := blocks.NewBlockWithCid(buf.Bytes(), c.Cid)
+				if err != nil {
+					return err
+				}
+				return bs.Put(block)
+			}
+			return &buf, committer, nil
+		}
+	}
+
+	graphSync := graphsyncimpl.New(ctx, network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	transport := dtgstransport.NewTransport(h.ID(), graphSync)
+	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
+	if err != nil {
+		return nil, err
+	}
+
+	peerResolver := discovery.NewLocal(ds)
+	rcn := NewRetrievalClientNode()
+	retrievalClient, err := RetrievalClient(h, mds, dt, peerResolver, ds, rcn)
+	if err != nil {
+		return nil, err
+	}
+	return retrievalClient, err
+}
+
+func RetrievalClient(h host.Host, mds dtypes.ClientMultiDstore, dt dtypes.ClientDataTransfer, resolver retrievalmarket.PeerResolver, ds dtypes.MetadataDS, adapter retrievalmarket.RetrievalClientNode) (retrievalmarket.RetrievalClient, error) {
+	network := rmnet.NewFromLibp2pHost(h)
+	sc := storedcounter.New(ds, datastore.NewKey("/retr"))
+	client, err := retrievalimpl.NewClient(network, mds, dt, adapter, resolver, namespace.Wrap(ds, datastore.NewKey("/retrievals/client")), sc)
+	if err != nil {
+		return nil, err
+	}
+	client.SubscribeToEvents(marketevents.RetrievalClientLogger)
+	return client, nil
+}
+
+func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {
+	return &ClientNodeAdapter{}
 }
 
 func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalmarket.RetrievalPeer, tok shared.TipSetToken) ([]multiaddr.Multiaddr, error) {
@@ -52,10 +166,6 @@ func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalma
 	return multiaddrs, nil
 }
 
-func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {
-	return &ClientNodeAdapter{}
-}
-
 // GetChainHead gets the current chain head. Return its TipSetToken and its abi.ChainEpoch.
 func (c *ClientNodeAdapter) GetChainHead(ctx context.Context) (shared.TipSetToken, abi.ChainEpoch, error) {
 	head, err := c.ChainHead(ctx)
@@ -70,7 +180,8 @@ func (c *ClientNodeAdapter) GetChainHead(ctx context.Context) (shared.TipSetToke
 // between a client and a miner and ensures the client has the given amount of
 // funds available in the channel.
 func (c *ClientNodeAdapter) GetOrCreatePaymentChannel(ctx context.Context, clientAddress, minerAddress address.Address, clientFundsAvailable abi.TokenAmount, tok shared.TipSetToken) (address.Address, cid.Cid, error) {
-	return c.GetPaych(ctx, clientAddress, minerAddress, clientFundsAvailable)
+	chanInfo, err := c.GetPaych(ctx, clientAddress, minerAddress, clientFundsAvailable)
+	return chanInfo.Channel, chanInfo.ChannelMessage, err
 }
 
 // Allocate late creates a lane within a payment channel so that calls to
@@ -94,7 +205,7 @@ func (c *ClientNodeAdapter) CreatePaymentVoucher(ctx context.Context, paymentCha
 // WaitForPaymentChannelAddFunds waits messageCID to appear on chain. If it doesn't appear within
 // defaultMsgWaitTimeout it returns error
 func (c *ClientNodeAdapter) WaitForPaymentChannelAddFunds(messageCID cid.Cid) error {
-	_, mr, err := c.sm.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
+	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
 
 	if err != nil {
 		return err
@@ -107,7 +218,7 @@ func (c *ClientNodeAdapter) WaitForPaymentChannelAddFunds(messageCID cid.Cid) er
 
 // WaitForPaymentChannelCreation waits for a message on chain with CID messageCID that a payment channel has been created.
 func (c *ClientNodeAdapter) WaitForPaymentChannelCreation(messageCID cid.Cid) (address.Address, error) {
-	_, mr, err := c.sm.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
+	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
 
 	if err != nil {
 		return address.Undef, err

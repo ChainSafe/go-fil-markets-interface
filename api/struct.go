@@ -17,7 +17,6 @@ import (
 	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/build"
-	"github.com/filecoin-project/lotus/chain/store"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/lotus/markets/utils"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
@@ -42,8 +41,8 @@ import (
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 	mh "github.com/multiformats/go-multihash"
-	"go.uber.org/fx"
 	"golang.org/x/xerrors"
 	"io"
 	"os"
@@ -54,17 +53,14 @@ var DefaultHashFunction = uint64(mh.BLAKE2B_MIN + 31)
 const dealStartBufferHours uint64 = 24
 
 type API struct {
-	fx.In
-
-	nodeapi.ChainAPI
-	nodeapi.StateAPI
+	nodeapi.Chain
+	nodeapi.State
 	nodeapi.Wallet
 	nodeapi.PaymentManager
 
 	SMDealClient storagemarket.StorageClient
 	RetDiscovery rm.PeerResolver
 	Retrieval    rm.RetrievalClient
-	Chain        *store.ChainStore
 
 	Imports dtypes.ClientImportMgr
 
@@ -508,13 +504,37 @@ func (a *API) ClientRetrieve(ctx context.Context, order api.RetrievalOrder, ref 
 	return files.WriteTo(file, ref.Path)
 }
 
+func NewStorageProviderInfo(address address.Address, miner address.Address, sectorSize abi.SectorSize, peer peer.ID, addrs []abi.Multiaddrs) storagemarket.StorageProviderInfo {
+	multiaddrs := make([]multiaddr.Multiaddr, 0, len(addrs))
+	if addrs == nil {
+		peerInfo, _ := nodeapi.NodeClient.UtilsAPI.NetFindPeer(context.Background(), peer)
+		multiaddrs = peerInfo.Addrs
+	} else {
+		for _, a := range addrs {
+			maddr, err := multiaddr.NewMultiaddrBytes(a)
+			if err != nil {
+				return storagemarket.StorageProviderInfo{}
+			}
+			multiaddrs = append(multiaddrs, maddr)
+		}
+	}
+
+	return storagemarket.StorageProviderInfo{
+		Address:    address,
+		Worker:     miner,
+		SectorSize: uint64(sectorSize),
+		PeerID:     peer,
+		Addrs:      multiaddrs,
+	}
+}
+
 func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.SignedStorageAsk, error) {
 	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("failed getting miner info: %w", err)
 	}
 
-	info := utils.NewStorageProviderInfo(miner, mi.Worker, mi.SectorSize, p, mi.Multiaddrs)
+	info := NewStorageProviderInfo(miner, mi.Worker, mi.SectorSize, p, mi.Multiaddrs)
 	signedAsk, err := a.SMDealClient.GetAsk(ctx, info)
 	if err != nil {
 		return nil, err

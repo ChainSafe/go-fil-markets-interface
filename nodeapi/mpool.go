@@ -11,14 +11,12 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type MpoolAPI struct {
-	node *Node
+type Mpool struct{}
+
+func (a *Mpool) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
+	return NodeClient.MpoolAPI.MpoolPushMessage(ctx, msg)
 }
 
-func (a *MpoolAPI) MpoolPushMessage(ctx context.Context, msg *types.Message) (*types.SignedMessage, error) {
-	return a.node.Mpool.MpoolPushMessage(ctx, msg)
-}
-
-func (a *MpoolAPI) EnsureAvailable(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error) {
-	return a.node.Mpool.MarketEnsureAvailable(ctx, addr, wallet, amt)
+func (a *Mpool) EnsureAvailable(ctx context.Context, addr, wallet address.Address, amt types.BigInt) (cid.Cid, error) {
+	return NodeClient.MpoolAPI.MarketEnsureAvailable(ctx, addr, wallet, amt)
 }

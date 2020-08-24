@@ -5,6 +5,8 @@ package main
 
 import (
 	"flag"
+	"github.com/ChainSafe/go-fil-markets-interface/config"
+	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"log"
 	"os"
 	"os/signal"
@@ -17,12 +19,27 @@ import (
 
 func main() {
 	flag.Parse()
-	if err := rpc.Serve(); err != nil {
-		log.Fatalf("Error while setting up the server.")
+	config.Load("./config/config.json")
+
+	nodeClient, nodeCloser, err := nodeapi.GetNodeAPI(nil)
+	if err != nil {
+		log.Fatalf("Error while initializing Node client: %s", err)
 	}
 
-	_ = storageadapter.NewStorageClientNode()
-	_ = retrievaladapter.NewRetrievalClientNode()
+	nodeapi.NodeClient = nodeClient
+
+	storageClient, err := storageadapter.InitStorageClient(nodeClient)
+	if err != nil {
+		log.Fatalf("Error while initializing storage client: %s", err)
+	}
+	retrievalClient, err := retrievaladapter.InitRetrievalClient()
+	if err != nil {
+		log.Fatalf("Error while initializing retrieval client: %s", err)
+	}
+
+	if err := rpc.Serve(storageClient, retrievalClient); err != nil {
+		log.Fatalf("Error while setting up the server %s.", err)
+	}
 
 	sdCh := make(chan os.Signal, 1)
 	signal.Notify(sdCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -39,6 +56,11 @@ func main() {
 				// Graceful shutdown.
 				signal.Stop(sdCh)
 				doneCh <- true
+				err := storageClient.Stop()
+				if err != nil {
+					log.Fatalf("Error while closing storage client %v", err)
+				}
+				nodeCloser()
 			} else if sigCnt == 3 {
 				// Force Shutdown
 				log.Printf("--- Got interrupt signal 3rd time. Aborting now.")

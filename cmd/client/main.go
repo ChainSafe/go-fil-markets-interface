@@ -196,6 +196,12 @@ var clientDealCmd = &cli.Command{
 		&CidBaseFlag,
 	},
 	Action: func(cctx *cli.Context) error {
+		nodeapi, nodeCloser, err := nodeapi.GetNodeAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer nodeCloser()
+
 		api, closer, err := client.GetMarketAPI(cctx)
 		if err != nil {
 			return err
@@ -230,14 +236,18 @@ var clientDealCmd = &cli.Command{
 		}
 
 		var a address.Address
-		if from := cctx.String("from"); from == "" {
+		if from := cctx.String("from"); from != "" {
 			faddr, err := address.NewFromString(from)
 			if err != nil {
 				return xerrors.Errorf("failed to parse 'from' address: %w", err)
 			}
 			a = faddr
 		} else {
-			return xerrors.Errorf("'from' address is not provided")
+			def, err := nodeapi.WalletDefaultAddress(ctx)
+			if err != nil {
+				return err
+			}
+			a = def
 		}
 
 		ref := &storagemarket.DataRef{
@@ -353,7 +363,7 @@ var clientQueryAskCmd = &cli.Command{
 			}
 			pid = p
 		} else {
-			mi, err := nodeapi.State.StateMinerInfo(ctx, maddr, types.EmptyTSK)
+			mi, err := nodeapi.StateAPI.StateMinerInfo(ctx, maddr, types.EmptyTSK)
 			if err != nil {
 				return xerrors.Errorf("failed to get peerID for miner: %w", err)
 			}
@@ -413,7 +423,7 @@ var clientListDeals = &cli.Command{
 		}
 		defer nodeCloser()
 
-		head, err := nodeapi.Chain.ChainHead(ctx)
+		head, err := nodeapi.ChainAPI.ChainHead(ctx)
 		if err != nil {
 			return err
 		}
@@ -435,7 +445,7 @@ var clientListDeals = &cli.Command{
 					},
 				})
 			} else {
-				onChain, err := nodeapi.State.StateMarketStorageDeal(ctx, v.DealID, head.Key())
+				onChain, err := nodeapi.StateAPI.StateMarketStorageDeal(ctx, v.DealID, head.Key())
 				if err != nil {
 					return err
 				}
@@ -503,7 +513,7 @@ var clientGetDealCmd = &cli.Command{
 		}
 
 		if di.DealID != 0 {
-			onChain, err := nodeapi.State.StateMarketStorageDeal(ctx, di.DealID, types.EmptyTSK)
+			onChain, err := nodeapi.StateAPI.StateMarketStorageDeal(ctx, di.DealID, types.EmptyTSK)
 			if err != nil {
 				return err
 			}
@@ -715,7 +725,7 @@ var clientRetrieveCmd = &cli.Command{
 		if cctx.String("from") != "" {
 			payer, err = address.NewFromString(cctx.String("from"))
 		} else {
-			payer, err = nodeapi.Wallet.WalletDefaultAddress(context.TODO())
+			payer, err = nodeapi.WalletAPI.WalletDefaultAddress(context.TODO())
 		}
 		if err != nil {
 			return err

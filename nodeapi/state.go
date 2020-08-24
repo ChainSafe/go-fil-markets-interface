@@ -13,55 +13,52 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type StateAPI struct {
-	Wallet Wallet
-	node   *Node
+type State struct{}
+
+func (s *State) StateMarketBalance(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error) {
+	return NodeClient.StateAPI.StateMarketBalance(ctx, addr, tsk)
 }
 
-func (s *StateAPI) StateMarketBalance(ctx context.Context, addr address.Address, tsk types.TipSetKey) (api.MarketBalance, error) {
-	return s.node.State.StateMarketBalance(ctx, addr, tsk)
+func (s *State) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
+	return NodeClient.StateAPI.StateAccountKey(ctx, addr, tsk)
 }
 
-func (s *StateAPI) StateAccountKey(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
-	return s.node.State.StateAccountKey(ctx, addr, tsk)
+func (s *State) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {
+	return NodeClient.StateAPI.StateWaitMsg(ctx, msg, confidence)
 }
 
-func (s *StateAPI) StateWaitMsg(ctx context.Context, msg cid.Cid, confidence uint64) (*api.MsgLookup, error) {
-	return s.node.State.StateWaitMsg(ctx, msg, confidence)
+func (s *State) StateMarketDeals(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error) {
+	return NodeClient.StateAPI.StateMarketDeals(ctx, tsk)
 }
 
-func (s *StateAPI) StateMarketDeals(ctx context.Context, tsk types.TipSetKey) (map[string]api.MarketDeal, error) {
-	return s.node.State.StateMarketDeals(ctx, tsk)
+func (s *State) StateListMiners(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error) {
+	return NodeClient.StateAPI.StateListMiners(ctx, tsk)
 }
 
-func (s *StateAPI) StateListMiners(ctx context.Context, tsk types.TipSetKey) ([]address.Address, error) {
-	return s.node.State.StateListMiners(ctx, tsk)
+func (s *State) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error) {
+	return NodeClient.StateAPI.StateMinerInfo(ctx, actor, tsk)
 }
 
-func (s *StateAPI) StateMinerInfo(ctx context.Context, actor address.Address, tsk types.TipSetKey) (api.MinerInfo, error) {
-	return s.node.State.StateMinerInfo(ctx, actor, tsk)
+func (s *State) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
+	return NodeClient.StateAPI.StateLookupID(ctx, addr, tsk)
 }
 
-func (s *StateAPI) StateLookupID(ctx context.Context, addr address.Address, tsk types.TipSetKey) (address.Address, error) {
-	return s.node.State.StateLookupID(ctx, addr, tsk)
+func (s *State) StateMarketStorageDeal(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error) {
+	return NodeClient.StateAPI.StateMarketStorageDeal(ctx, dealId, tsk)
 }
 
-func (s *StateAPI) StateMarketStorageDeal(ctx context.Context, dealId abi.DealID, tsk types.TipSetKey) (*api.MarketDeal, error) {
-	return s.node.State.StateMarketStorageDeal(ctx, dealId, tsk)
+func (s *State) StateMinerProvingDeadline(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error) {
+	return NodeClient.StateAPI.StateMinerProvingDeadline(ctx, addr, tsk)
 }
 
-func (s *StateAPI) StateMinerProvingDeadline(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*miner.DeadlineInfo, error) {
-	return s.node.State.StateMinerProvingDeadline(ctx, addr, tsk)
+func (s *State) StateGetReceipt(ctx context.Context, cid cid.Cid, tsk types.TipSetKey) (*types.MessageReceipt, error) {
+	return NodeClient.StateAPI.StateGetReceipt(ctx, cid, tsk)
 }
 
-func (s *StateAPI) StateGetReceipt(ctx context.Context, cid cid.Cid, tsk types.TipSetKey) (*types.MessageReceipt, error) {
-	return s.node.State.StateGetReceipt(ctx, cid, tsk)
+func (s *State) StateGetActor(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error) {
+	return NodeClient.StateAPI.StateGetActor(ctx, actor, tsk)
 }
 
-func (s *StateAPI) StateGetActor(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error) {
-	return s.node.State.StateGetActor(ctx, actor, tsk)
-}
-
-func (s *StateAPI) StateDealProviderCollateralBounds(ctx context.Context, size abi.PaddedPieceSize, verified bool, tsk types.TipSetKey) (api.DealCollateralBounds, error) {
-	return s.node.State.StateDealProviderCollateralBounds(ctx, size, verified, tsk)
+func (s *State) StateDealProviderCollateralBounds(ctx context.Context, size abi.PaddedPieceSize, verified bool, tsk types.TipSetKey) (api.DealCollateralBounds, error) {
+	return NodeClient.StateAPI.StateDealProviderCollateralBounds(ctx, size, verified, tsk)
 }
