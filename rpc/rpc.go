@@ -21,7 +21,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	dss "github.com/ipfs/go-datastore/sync"
-	manet "github.com/multiformats/go-multiaddr-net"
+	"github.com/multiformats/go-multiaddr/net"
 )
 
 func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient) error {

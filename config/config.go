@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/multiformats/go-multiaddr"
-	manet "github.com/multiformats/go-multiaddr-net"
+	"github.com/multiformats/go-multiaddr/net"
 	"io/ioutil"
 	"net/http"
 	os "os"

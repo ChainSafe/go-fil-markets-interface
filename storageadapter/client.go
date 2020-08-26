@@ -383,7 +383,7 @@ func (n *ClientNodeAdapter) GetMinerInfo(ctx context.Context, maddr address.Addr
 		return nil, err
 	}
 
-	out := utils.NewStorageProviderInfo(maddr, mi.Worker, mi.SectorSize, mi.PeerId, mi.Multiaddrs)
+	out := nodeapi.NewStorageProviderInfo(maddr, mi.Worker, mi.SectorSize, *mi.PeerId, mi.Multiaddrs)
 	return &out, nil
 }
 
