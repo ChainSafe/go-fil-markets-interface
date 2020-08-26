@@ -32,6 +32,7 @@ import (
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/go-merkledag"
 	unixfile "github.com/ipfs/go-unixfs/file"
 	"github.com/ipfs/go-unixfs/importer/balanced"
@@ -68,6 +69,8 @@ type API struct {
 	RetrievalStoreMgr dtypes.ClientRetrievalStoreManager
 }
 
+var log = logging.Logger("markets")
+
 func calcDealExpiration(minDuration uint64, md *miner.DeadlineInfo, startEpoch abi.ChainEpoch) abi.ChainEpoch {
 	// Make sure we give some time for the miner to seal
 	minExp := startEpoch + abi.ChainEpoch(minDuration)
@@ -81,6 +84,7 @@ func (a *API) imgr() *importmgr.Mgr {
 }
 
 func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) (*cid.Cid, error) {
+	log.Infof("Validate the deal")
 	var storeID *multistore.StoreID
 	if params.Data.TransferType == storagemarket.TTGraphsync {
 		importIDs := a.imgr().List()
@@ -131,6 +135,7 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 
 	providerInfo := utils.NewStorageProviderInfo(params.Miner, mi.Worker, mi.SectorSize, mi.PeerId, mi.Multiaddrs)
 
+	log.Infof("Starting the deal")
 	dealStart := params.DealStartEpoch
 	if dealStart <= 0 { // unset, or explicitly 'epoch undefined'
 		ts, err := a.ChainHead(ctx)
@@ -142,6 +147,7 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 		dealStart = ts.Height() + abi.ChainEpoch(dealStartBufferHours*blocksPerHour)
 	}
 
+	log.Infof("Proposing the deal")
 	result, err := a.SMDealClient.ProposeStorageDeal(ctx, storagemarket.ProposeStorageDealParams{
 		Addr:          params.Wallet,
 		Info:          &providerInfo,
@@ -164,6 +170,7 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 }
 
 func (a *API) ClientListDeals(ctx context.Context) ([]api.DealInfo, error) {
+	log.Infof("Listing deals")
 	deals, err := a.SMDealClient.ListLocalDeals(ctx)
 	if err != nil {
 		return nil, err
@@ -191,6 +198,7 @@ func (a *API) ClientListDeals(ctx context.Context) ([]api.DealInfo, error) {
 }
 
 func (a *API) ClientGetDealInfo(ctx context.Context, d cid.Cid) (*api.DealInfo, error) {
+	log.Infof("Getting deal info")
 	v, err := a.SMDealClient.GetLocalDeal(ctx, d)
 	if err != nil {
 		return nil, err
@@ -211,7 +219,7 @@ func (a *API) ClientGetDealInfo(ctx context.Context, d cid.Cid) (*api.DealInfo, 
 
 func (a *API) ClientHasLocal(ctx context.Context, root cid.Cid) (bool, error) {
 	// TODO: check if we have the ENTIRE dag
-
+	log.Infof("Check data in local")
 	offExch := merkledag.NewDAGService(blockservice.New(a.Imports.Blockstore, offline.Exchange(a.Imports.Blockstore)))
 	_, err := offExch.Get(ctx, root)
 	if err == ipld.ErrNotFound {
@@ -224,6 +232,7 @@ func (a *API) ClientHasLocal(ctx context.Context, root cid.Cid) (bool, error) {
 }
 
 func (a *API) ClientFindData(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error) {
+	log.Infof("Finding data")
 	peers, err := a.RetDiscovery.GetPeers(root)
 	if err != nil {
 		return nil, err
@@ -241,6 +250,7 @@ func (a *API) ClientFindData(ctx context.Context, root cid.Cid, piece *cid.Cid) 
 }
 
 func (a *API) ClientMinerQueryOffer(ctx context.Context, miner address.Address, root cid.Cid, piece *cid.Cid) (api.QueryOffer, error) {
+	log.Infof("Query Miner for offer")
 	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
 	if err != nil {
 		return api.QueryOffer{}, err
@@ -253,6 +263,7 @@ func (a *API) ClientMinerQueryOffer(ctx context.Context, miner address.Address, 
 }
 
 func (a *API) makeRetrievalQuery(ctx context.Context, rp rm.RetrievalPeer, payload cid.Cid, piece *cid.Cid, qp rm.QueryParams) api.QueryOffer {
+	log.Infof("Making retrieval query")
 	queryResponse, err := a.Retrieval.Query(ctx, rp, payload, qp)
 	if err != nil {
 		return api.QueryOffer{Err: err.Error(), Miner: rp.Address, MinerPeer: rp}
@@ -282,6 +293,7 @@ func (a *API) makeRetrievalQuery(ctx context.Context, rp rm.RetrievalPeer, paylo
 }
 
 func (a *API) ClientImport(ctx context.Context, ref api.FileRef) (*api.ImportRes, error) {
+	log.Infof("Client import")
 	id, st, err := a.imgr().NewStore()
 	if err != nil {
 		return nil, err
@@ -310,10 +322,12 @@ func (a *API) ClientImport(ctx context.Context, ref api.FileRef) (*api.ImportRes
 }
 
 func (a *API) ClientRemoveImport(ctx context.Context, importID multistore.StoreID) error {
+	log.Infof("Removing imported data")
 	return a.imgr().Remove(importID)
 }
 
 func (a *API) ClientImportLocal(ctx context.Context, f io.Reader) (cid.Cid, error) {
+	log.Infof("Importing data locally")
 	file := files.NewReaderFile(f)
 
 	id, st, err := a.imgr().NewStore()
@@ -358,6 +372,7 @@ func (a *API) ClientImportLocal(ctx context.Context, f io.Reader) (cid.Cid, erro
 }
 
 func (a *API) ClientListImports(ctx context.Context) ([]api.Import, error) {
+	log.Infof("Listing imports")
 	importIDs := a.imgr().List()
 
 	out := make([]api.Import, len(importIDs))
@@ -393,6 +408,7 @@ func (a *API) ClientListImports(ctx context.Context) ([]api.Import, error) {
 }
 
 func (a *API) ClientRetrieve(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error {
+	log.Infof("Starting retrieval deal")
 	if order.MinerPeer.ID == "" {
 		mi, err := a.StateMinerInfo(ctx, order.Miner, types.EmptyTSK)
 		if err != nil {
@@ -529,6 +545,7 @@ func NewStorageProviderInfo(address address.Address, miner address.Address, sect
 }
 
 func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.SignedStorageAsk, error) {
+	log.Infof("Querying miner ask")
 	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("failed getting miner info: %w", err)
@@ -543,6 +560,7 @@ func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Addre
 }
 
 func (a *API) ClientCalcCommP(ctx context.Context, inpath string, miner address.Address) (*api.CommPRet, error) {
+	log.Infof("Calculating piece-cid")
 	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
 	if err != nil {
 		return nil, xerrors.Errorf("failed checking miners sector size: %w", err)
@@ -584,6 +602,7 @@ func (w *lenWriter) Write(p []byte) (n int, err error) {
 }
 
 func (a *API) ClientDealSize(ctx context.Context, root cid.Cid) (api.DataSize, error) {
+	log.Infof("Querying deal size")
 	dag := merkledag.NewDAGService(blockservice.New(a.CombinedBstore, offline.Exchange(a.CombinedBstore)))
 
 	w := lenWriter(0)
@@ -602,6 +621,7 @@ func (a *API) ClientDealSize(ctx context.Context, root cid.Cid) (api.DataSize, e
 }
 
 func (a *API) ClientGenCar(ctx context.Context, ref api.FileRef, outputPath string) error {
+	log.Infof("Generating car file")
 	id, st, err := a.imgr().NewStore()
 	if err != nil {
 		return err

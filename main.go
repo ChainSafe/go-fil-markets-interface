@@ -7,7 +7,7 @@ import (
 	"flag"
 	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
-	"log"
+	logging "github.com/ipfs/go-log/v2"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +17,8 @@ import (
 	"github.com/ChainSafe/go-fil-markets-interface/storageadapter"
 )
 
+var log = logging.Logger("markets")
+
 func main() {
 	flag.Parse()
 	config.Load("./config/config.json")
@@ -25,21 +27,25 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error while initializing Node client: %s", err)
 	}
-
+	log.Infof("Initialized node client")
 	nodeapi.NodeClient = nodeClient
 
-	storageClient, err := storageadapter.InitStorageClient(nodeClient)
+	storageClient, err := storageadapter.InitStorageClient()
 	if err != nil {
 		log.Fatalf("Error while initializing storage client: %s", err)
 	}
+	log.Infof("Initialized storage market")
+
 	retrievalClient, err := retrievaladapter.InitRetrievalClient()
 	if err != nil {
 		log.Fatalf("Error while initializing retrieval client: %s", err)
 	}
+	log.Infof("Initialized retrieval market")
 
 	if err := rpc.Serve(storageClient, retrievalClient); err != nil {
 		log.Fatalf("Error while setting up the server %s.", err)
 	}
+	log.Infof("Started serving Markets on %s", config.Api.Market.Addr)
 
 	sdCh := make(chan os.Signal, 1)
 	signal.Notify(sdCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -50,7 +56,7 @@ func main() {
 	go func() {
 		var sigCnt int
 		for sig := range sdCh {
-			log.Printf("--- Received %s signal", sig)
+			log.Infof("--- Received %s signal", sig)
 			sigCnt++
 			if sigCnt == 1 {
 				// Graceful shutdown.
@@ -63,10 +69,10 @@ func main() {
 				nodeCloser()
 			} else if sigCnt == 3 {
 				// Force Shutdown
-				log.Printf("--- Got interrupt signal 3rd time. Aborting now.")
+				log.Infof("--- Got interrupt signal 3rd time. Aborting now.")
 				os.Exit(1)
 			} else {
-				log.Printf("--- Ignoring interrupt signal.")
+				log.Infof("--- Ignoring interrupt signal.")
 			}
 		}
 	}()

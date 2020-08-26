@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"github.com/filecoin-project/lotus/lib/sigs"
+	logging "github.com/ipfs/go-log/v2"
 	"io"
 	"time"
 
@@ -42,7 +43,6 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
-	"github.com/golang/glog"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -57,6 +57,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
 )
+
+var log = logging.Logger("storage_market")
 
 // This file implements StorageClientNode which is a client interface for making storage deals
 // with a StorageProvider
@@ -81,7 +83,7 @@ type clientApi struct {
 
 type ClientDealFunds funds.DealFunds
 
-func InitStorageClient(nodeClient *nodeapi.Node) (storagemarket.StorageClient, error) {
+func InitStorageClient() (storagemarket.StorageClient, error) {
 	ctx := context.Background()
 	priv, _, err := p2pcrypto.GenerateKeyPair(p2pcrypto.RSA, 2048)
 	if err != nil {
@@ -245,7 +247,7 @@ func (n *ClientNodeAdapter) ListStorageProviders(ctx context.Context, encodedTs 
 // ValidatePublishedDeal validates that the provided deal has appeared on chain and references the same ClientDeal
 // returns the Deal id if there is no error
 func (n *ClientNodeAdapter) ValidatePublishedDeal(ctx context.Context, deal storagemarket.ClientDeal) (abi.DealID, error) {
-	glog.Info("DEAL ACCEPTED!")
+	log.Infow("DEAL ACCEPTED!")
 
 	pubmsg, err := n.GetMessage(*deal.PublishMessage)
 	if err != nil {
@@ -484,7 +486,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 		}()
 
 		if msg == nil {
-			glog.Errorf("timed out waiting for deal activation... what now?")
+			log.Error("timed out waiting for deal activation... what now?")
 			return false, nil
 		}
 
@@ -497,7 +499,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 			return false, xerrors.Errorf("deal wasn't active: deal=%d, parentState=%s, h=%d", dealID, ts.ParentState(), ts.Height())
 		}
 
-		glog.Infof("Storage deal %d activated at epoch %d", dealID, sd.State.SectorStartEpoch)
+		log.Infof("Storage deal %d activated at epoch %d", dealID, sd.State.SectorStartEpoch)
 
 		cb(nil)
 
@@ -505,7 +507,7 @@ func (n *ClientNodeAdapter) OnDealSectorCommitted(ctx context.Context, provider 
 	}
 
 	revert := func(ctx context.Context, ts *types.TipSet) error {
-		glog.Warningf("deal activation reverted; TODO: actually handle this!")
+		log.Warn("deal activation reverted; TODO: actually handle this!")
 		// TODO: Just go back to DealSealing?
 		return nil
 	}
@@ -600,7 +602,7 @@ func (n *ClientNodeAdapter) OnDealExpiredOrSlashed(ctx context.Context, dealID a
 
 		// Timeout waiting for state change
 		if states == nil {
-			glog.Error("timed out waiting for deal expiry")
+			log.Error("timed out waiting for deal expiry")
 			return false, nil
 		}
 
@@ -627,7 +629,7 @@ func (n *ClientNodeAdapter) OnDealExpiredOrSlashed(ctx context.Context, dealID a
 	// Called when there was a chain reorg and the state change was reverted
 	revert := func(ctx context.Context, ts *types.TipSet) error {
 		// TODO: Is it ok to just ignore this?
-		glog.Warning("deal state reverted; TODO: actually handle this!")
+		log.Warn("deal state reverted; TODO: actually handle this!")
 		return nil
 	}
 
