@@ -20,7 +20,7 @@ import (
 var log = logging.Logger("markets")
 
 func main() {
-	logging.SetLogLevel("*", "INFO")
+	_ = logging.SetLogLevel("*", "INFO")
 
 	flag.Parse()
 	config.Load("./config/config.json")
