@@ -181,7 +181,7 @@ func (c *ClientNodeAdapter) GetChainHead(ctx context.Context) (shared.TipSetToke
 // funds available in the channel.
 func (c *ClientNodeAdapter) GetOrCreatePaymentChannel(ctx context.Context, clientAddress, minerAddress address.Address, clientFundsAvailable abi.TokenAmount, tok shared.TipSetToken) (address.Address, cid.Cid, error) {
 	chanInfo, err := c.GetPaych(ctx, clientAddress, minerAddress, clientFundsAvailable)
-	return chanInfo.Channel, chanInfo.ChannelMessage, err
+	return chanInfo.Channel, chanInfo.WaitSentinel, err
 }
 
 // Allocate late creates a lane within a payment channel so that calls to

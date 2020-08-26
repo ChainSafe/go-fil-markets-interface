@@ -368,11 +368,11 @@ var clientQueryAskCmd = &cli.Command{
 				return xerrors.Errorf("failed to get peerID for miner: %w", err)
 			}
 
-			if peer.ID(mi.PeerId) == peer.ID("SETME") {
+			if peer.ID(*mi.PeerId) == peer.ID("SETME") {
 				return fmt.Errorf("the miner hasn't initialized yet")
 			}
 
-			pid = peer.ID(mi.PeerId)
+			pid = peer.ID(*mi.PeerId)
 		}
 
 		ask, err := api.ClientQueryAsk(ctx, pid, maddr)

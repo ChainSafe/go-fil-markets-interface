@@ -98,7 +98,7 @@ type Node struct {
 
 func NewNodeClient(addr string, requestHeader http.Header) (*Node, jsonrpc.ClientCloser, error) {
 	var node Node
-	closer, err := jsonrpc.NewMergeClient(addr, "Filecoin",
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "Filecoin",
 		[]interface{}{
 			&node.ChainAPI,
 			&node.MpoolAPI,

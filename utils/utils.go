@@ -2,14 +2,16 @@ package utils
 
 import (
 	"context"
+	logging "github.com/ipfs/go-log/v2"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/golang/glog"
 	"github.com/urfave/cli/v2"
 )
+
+var log = logging.Logger("utils")
 
 func AuthHeader(token string) http.Header {
 	if len(token) != 0 {
@@ -17,7 +19,7 @@ func AuthHeader(token string) http.Header {
 		headers.Add("Authorization", "Bearer "+string(token))
 		return headers
 	}
-	glog.Warning("API Token not set and requested, capabilities might be limited.")
+	log.Warn("API Token not set and requested, capabilities might be limited.")
 	return nil
 }
 
