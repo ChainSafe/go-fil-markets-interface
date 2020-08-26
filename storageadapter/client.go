@@ -58,7 +58,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var log = logging.Logger("storage_market")
+var log = logging.Logger("storagemarket_client")
 
 // This file implements StorageClientNode which is a client interface for making storage deals
 // with a StorageProvider
