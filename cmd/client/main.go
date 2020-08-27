@@ -510,6 +510,7 @@ var clientGetDealCmd = &cli.Command{
 
 		out := map[string]interface{}{
 			"DealInfo: ": di,
+			"DealState":  storagemarket.DealStates[di.State],
 		}
 
 		if di.DealID != 0 {
@@ -525,7 +526,7 @@ var clientGetDealCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(b)
+		fmt.Println(string(b))
 		return nil
 	},
 }
