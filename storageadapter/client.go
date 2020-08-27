@@ -83,11 +83,16 @@ type clientApi struct {
 
 type ClientDealFunds funds.DealFunds
 
-func InitStorageClient() (storagemarket.StorageClient, error) {
+type StorageClientInfo struct {
+	DataTransfer dtypes.ClientDataTransfer
+	Host         host.Host
+}
+
+func InitStorageClient() (storagemarket.StorageClient, *StorageClientInfo, error) {
 	ctx := context.Background()
 	priv, _, err := p2pcrypto.GenerateKeyPair(p2pcrypto.RSA, 2048)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	opts := []libp2p.Option{
@@ -99,21 +104,21 @@ func InitStorageClient() (storagemarket.StorageClient, error) {
 	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ds := dss.MutexWrap(datastore.NewMapDatastore())
 	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
 	mds, err := multistore.NewMultiDstore(ds)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	scn := NewStorageClientNode()
 
 	clientDealFunds, err := funds.NewDealFunds(ds, datastore.NewKey("storage/client/dealfunds"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	storedCounter := storedcounter.New(ds, datastore.NewKey("counter"))
@@ -155,15 +160,15 @@ func InitStorageClient() (storagemarket.StorageClient, error) {
 	transport := dtgstransport.NewTransport(h.ID(), graphSync)
 	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	peerResolver := discovery.NewLocal(ds)
 	storageClient, err := StorageClient(h, bs, mds, dt, peerResolver, ds, scn, clientDealFunds)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return storageClient, nil
+	return storageClient, &StorageClientInfo{dt, h}, nil
 }
 
 func StorageClient(h host.Host, ibs dtypes.ClientBlockstore, mds *multistore.MultiStore, dataTransfer datatransfer.Manager, discovery *discovery.Local, deals dtypes.ClientDatastore, scn storagemarket.StorageClientNode, dealFunds ClientDealFunds) (storagemarket.StorageClient, error) {

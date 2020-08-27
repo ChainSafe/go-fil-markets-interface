@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	tm "github.com/buger/goterm"
 	"os"
 	"path/filepath"
 	"sort"
@@ -97,6 +98,8 @@ var clientCmd = &cli.Command{
 		WithCategory("retrieval", clientRetrieveCmd),
 		WithCategory("util", clientCommPCmd),
 		WithCategory("util", clientCarGenCmd),
+		WithCategory("util", clientInfoCmd),
+		WithCategory("util", clientListTransfers),
 	},
 }
 
@@ -895,6 +898,129 @@ var clientCarGenCmd = &cli.Command{
 		if err = api.ClientGenCar(ctx, ref, op); err != nil {
 			return err
 		}
+		return nil
+	},
+}
+
+var clientListTransfers = &cli.Command{
+	Name:  "list-transfers",
+	Usage: "List ongoing data transfers for deals",
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "color",
+			Usage: "use color in display output",
+			Value: true,
+		},
+		&cli.BoolFlag{
+			Name:  "completed",
+			Usage: "show completed data transfers",
+		},
+		&cli.BoolFlag{
+			Name:  "watch",
+			Usage: "watch deal updates in real-time, rather than a one time list",
+		},
+	},
+	Action: func(cctx *cli.Context) error {
+		api, closer, err := client.GetMarketAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer closer()
+		ctx := utils.ReqContext(cctx)
+
+		channels, err := api.ClientListDataTransfers(ctx)
+		if err != nil {
+			return err
+		}
+
+		completed := cctx.Bool("completed")
+		color := cctx.Bool("color")
+		watch := cctx.Bool("watch")
+
+		if watch {
+			channelUpdates, err := api.ClientDataTransferUpdates(ctx)
+			if err != nil {
+				return err
+			}
+
+			for {
+				tm.Clear() // Clear current screen
+
+				tm.MoveCursor(1, 1)
+
+				lcli.OutputDataTransferChannels(tm.Screen, channels, completed, color)
+
+				tm.Flush()
+
+				select {
+				case <-ctx.Done():
+					return nil
+				case channelUpdate := <-channelUpdates:
+					var found bool
+					for i, existing := range channels {
+						if existing.TransferID == channelUpdate.TransferID &&
+							existing.OtherPeer == channelUpdate.OtherPeer &&
+							existing.IsSender == channelUpdate.IsSender &&
+							existing.IsInitiator == channelUpdate.IsInitiator {
+							channels[i] = channelUpdate
+							found = true
+							break
+						}
+					}
+					if !found {
+						channels = append(channels, channelUpdate)
+					}
+				}
+			}
+		}
+		lcli.OutputDataTransferChannels(os.Stdout, channels, completed, color)
+		return nil
+	},
+}
+
+var clientInfoCmd = &cli.Command{
+	Name:  "info",
+	Usage: "Print storage market client information",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "client",
+			Usage: "specify storage client address",
+		},
+	},
+	Action: func(cctx *cli.Context) error {
+		nodeapi, nodeCloser, err := nodeapi.GetNodeAPI(cctx)
+		if err != nil {
+			return err
+		}
+		defer nodeCloser()
+		ctx := utils.ReqContext(cctx)
+
+		var addr address.Address
+		if clientFlag := cctx.String("client"); clientFlag != "" {
+			ca, err := address.NewFromString("client")
+			if err != nil {
+				return err
+			}
+
+			addr = ca
+		} else {
+			def, err := nodeapi.WalletDefaultAddress(ctx)
+			if err != nil {
+				return err
+			}
+			addr = def
+		}
+
+		balance, err := nodeapi.StateMarketBalance(ctx, addr, types.EmptyTSK)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Client Market Info:\n")
+
+		fmt.Printf("Locked Funds:\t%s\n", types.FIL(balance.Locked))
+		fmt.Printf("Escrowed Funds:\t%s\n", types.FIL(balance.Escrow))
+
 		return nil
 	},
 }

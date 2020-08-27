@@ -19,20 +19,22 @@ import (
 type RepoType int
 
 type Market struct {
-	ClientStartDeal       func(ctx context.Context, params *api.StartDealParams) (*cid.Cid, error)
-	ClientListDeals       func(ctx context.Context) ([]api.DealInfo, error)
-	ClientGetDealInfo     func(ctx context.Context, d cid.Cid) (*api.DealInfo, error)
-	ClientHasLocal        func(ctx context.Context, root cid.Cid) (bool, error)
-	ClientFindData        func(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error)
-	ClientMinerQueryOffer func(ctx context.Context, miner address.Address, root cid.Cid, piece *cid.Cid) (api.QueryOffer, error)
-	ClientImport          func(ctx context.Context, ref api.FileRef) (*api.ImportRes, error)
-	ClientRemoveImport    func(ctx context.Context, importID int) error
-	ClientImportLocal     func(ctx context.Context, f io.Reader) (cid.Cid, error)
-	ClientListImports     func(ctx context.Context) ([]api.Import, error)
-	ClientRetrieve        func(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error
-	ClientQueryAsk        func(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.SignedStorageAsk, error)
-	ClientCalcCommP       func(ctx context.Context, inpath string, miner address.Address) (*api.CommPRet, error)
-	ClientGenCar          func(ctx context.Context, ref api.FileRef, outputPath string) error
+	ClientStartDeal           func(ctx context.Context, params *api.StartDealParams) (*cid.Cid, error)
+	ClientListDeals           func(ctx context.Context) ([]api.DealInfo, error)
+	ClientGetDealInfo         func(ctx context.Context, d cid.Cid) (*api.DealInfo, error)
+	ClientHasLocal            func(ctx context.Context, root cid.Cid) (bool, error)
+	ClientFindData            func(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error)
+	ClientMinerQueryOffer     func(ctx context.Context, miner address.Address, root cid.Cid, piece *cid.Cid) (api.QueryOffer, error)
+	ClientImport              func(ctx context.Context, ref api.FileRef) (*api.ImportRes, error)
+	ClientRemoveImport        func(ctx context.Context, importID int) error
+	ClientImportLocal         func(ctx context.Context, f io.Reader) (cid.Cid, error)
+	ClientListImports         func(ctx context.Context) ([]api.Import, error)
+	ClientRetrieve            func(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error
+	ClientQueryAsk            func(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.SignedStorageAsk, error)
+	ClientCalcCommP           func(ctx context.Context, inpath string, miner address.Address) (*api.CommPRet, error)
+	ClientGenCar              func(ctx context.Context, ref api.FileRef, outputPath string) error
+	ClientListDataTransfers   func(ctx context.Context) ([]api.DataTransferChannel, error)
+	ClientDataTransferUpdates func(ctx context.Context) (<-chan api.DataTransferChannel, error)
 }
 
 func NewMarketClient(addr string, requestHeader http.Header) (*Market, jsonrpc.ClientCloser, error) {
