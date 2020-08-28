@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
+	datatransfer "github.com/filecoin-project/go-data-transfer"
 	"github.com/filecoin-project/go-fil-markets/pieceio"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	rm "github.com/filecoin-project/go-fil-markets/retrievalmarket"
@@ -22,7 +23,6 @@ import (
 	"github.com/filecoin-project/lotus/node/repo/importmgr"
 	"github.com/filecoin-project/sector-storage/ffiwrapper"
 	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/abi/big"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
@@ -40,6 +40,7 @@ import (
 	basicnode "github.com/ipld/go-ipld-prime/node/basic"
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	mh "github.com/multiformats/go-multihash"
 	"golang.org/x/xerrors"
@@ -65,6 +66,8 @@ type API struct {
 
 	CombinedBstore    dtypes.ClientBlockstore // TODO: try to remove
 	RetrievalStoreMgr dtypes.ClientRetrievalStoreManager
+	DataTransfer      dtypes.ClientDataTransfer
+	Host              host.Host
 }
 
 var log = logging.Logger("markets")
@@ -153,7 +156,7 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 		StartEpoch:    dealStart,
 		EndEpoch:      calcDealExpiration(params.MinBlocksDuration, md, dealStart),
 		Price:         params.EpochPrice,
-		Collateral:    big.Zero(),
+		Collateral:    params.ProviderCollateral,
 		Rt:            rt,
 		FastRetrieval: params.FastRetrieval,
 		VerifiedDeal:  params.VerifiedDeal,
@@ -189,6 +192,7 @@ func (a *API) ClientListDeals(ctx context.Context) ([]api.DealInfo, error) {
 			PricePerEpoch: v.Proposal.StoragePricePerEpoch,
 			Duration:      uint64(v.Proposal.Duration()),
 			DealID:        v.DealID,
+			CreationTime:  v.CreationTime.Time(),
 		}
 	}
 
@@ -212,6 +216,7 @@ func (a *API) ClientGetDealInfo(ctx context.Context, d cid.Cid) (*api.DealInfo, 
 		PricePerEpoch: v.Proposal.StoragePricePerEpoch,
 		Duration:      uint64(v.Proposal.Duration()),
 		DealID:        v.DealID,
+		CreationTime:  v.CreationTime.Time(),
 	}, nil
 }
 
@@ -701,4 +706,37 @@ func (a *API) clientImport(ctx context.Context, ref api.FileRef, store *multisto
 	}
 
 	return nd.Cid(), nil
+}
+
+func (a *API) ClientListDataTransfers(ctx context.Context) ([]api.DataTransferChannel, error) {
+	inProgressChannels, err := a.DataTransfer.InProgressChannels(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	apiChannels := make([]api.DataTransferChannel, 0, len(inProgressChannels))
+	for _, channelState := range inProgressChannels {
+		apiChannels = append(apiChannels, api.NewDataTransferChannel(a.Host.ID(), channelState))
+	}
+
+	return apiChannels, nil
+}
+
+func (a *API) ClientDataTransferUpdates(ctx context.Context) (<-chan api.DataTransferChannel, error) {
+	channels := make(chan api.DataTransferChannel)
+
+	unsub := a.DataTransfer.SubscribeToEvents(func(evt datatransfer.Event, channelState datatransfer.ChannelState) {
+		channel := api.NewDataTransferChannel(a.Host.ID(), channelState)
+		select {
+		case <-ctx.Done():
+		case channels <- channel:
+		}
+	})
+
+	go func() {
+		defer unsub()
+		<-ctx.Done()
+	}()
+
+	return channels, nil
 }

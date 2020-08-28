@@ -32,7 +32,7 @@ func main() {
 	log.Infof("Initialized node client")
 	nodeapi.NodeClient = nodeClient
 
-	storageClient, err := storageadapter.InitStorageClient()
+	storageClient, storageClientInfo, err := storageadapter.InitStorageClient()
 	if err != nil {
 		log.Fatalf("Error while initializing storage client: %s", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 	}
 	log.Infof("Initialized retrieval market")
 
-	if err := rpc.Serve(storageClient, retrievalClient); err != nil {
+	if err := rpc.Serve(storageClient, retrievalClient, storageClientInfo); err != nil {
 		log.Fatalf("Error while setting up the server %s.", err)
 	}
 	log.Infof("Started serving Markets on %s", config.Api.Market.Addr)

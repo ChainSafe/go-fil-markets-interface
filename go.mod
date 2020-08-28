@@ -3,6 +3,7 @@ module github.com/ChainSafe/go-fil-markets-interface
 go 1.13
 
 require (
+	github.com/buger/goterm v0.0.0-20200322175922-2f3e71b85129
 	github.com/filecoin-project/go-address v0.0.3
 	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
 	github.com/filecoin-project/go-data-transfer v0.6.2
