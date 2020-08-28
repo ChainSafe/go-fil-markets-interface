@@ -52,8 +52,6 @@ import (
 	"github.com/ipfs/go-graphsync/network"
 	"github.com/ipld/go-ipld-prime"
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
-	"github.com/libp2p/go-libp2p"
-	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"golang.org/x/xerrors"
 )
@@ -88,25 +86,7 @@ type StorageClientInfo struct {
 	Host         host.Host
 }
 
-func InitStorageClient() (storagemarket.StorageClient, *StorageClientInfo, error) {
-	ctx := context.Background()
-	priv, _, err := p2pcrypto.GenerateKeyPair(p2pcrypto.RSA, 2048)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	opts := []libp2p.Option{
-		libp2p.Identity(priv),
-		libp2p.DefaultTransports,
-		libp2p.DefaultMuxers,
-		libp2p.DefaultSecurity,
-		libp2p.NATPortMap(),
-	}
-	h, err := libp2p.New(ctx, opts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func InitStorageClient(h host.Host) (storagemarket.StorageClient, *StorageClientInfo, error) {
 	ds := dss.MutexWrap(datastore.NewMapDatastore())
 	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
 	mds, err := multistore.NewMultiDstore(ds)
@@ -156,7 +136,7 @@ func InitStorageClient() (storagemarket.StorageClient, *StorageClientInfo, error
 		}
 	}
 
-	graphSync := graphsyncimpl.New(ctx, network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	graphSync := graphsyncimpl.New(context.Background(), network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
 	transport := dtgstransport.NewTransport(h.ID(), graphSync)
 	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
 	if err != nil {

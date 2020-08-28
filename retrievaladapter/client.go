@@ -39,8 +39,6 @@ import (
 	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
 	"github.com/ipld/go-ipld-prime"
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
-	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
@@ -53,25 +51,7 @@ type ClientNodeAdapter struct {
 	nodeapi.State
 }
 
-func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
-	ctx := context.Background()
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := []libp2p.Option{
-		libp2p.Identity(priv),
-		libp2p.DefaultTransports,
-		libp2p.DefaultMuxers,
-		libp2p.DefaultSecurity,
-		libp2p.NATPortMap(),
-	}
-	h, err := libp2p.New(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-
+func InitRetrievalClient(h host.Host) (retrievalmarket.RetrievalClient, error) {
 	ds := dss.MutexWrap(datastore.NewMapDatastore())
 	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
 	mds, err := multistore.NewMultiDstore(ds)
@@ -114,7 +94,7 @@ func InitRetrievalClient() (retrievalmarket.RetrievalClient, error) {
 		}
 	}
 
-	graphSync := graphsyncimpl.New(ctx, network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	graphSync := graphsyncimpl.New(context.Background(), network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
 	transport := dtgstransport.NewTransport(h.ID(), graphSync)
 	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
 	if err != nil {

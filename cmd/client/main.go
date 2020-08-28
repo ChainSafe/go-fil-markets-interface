@@ -276,7 +276,14 @@ var clientDealCmd = &cli.Command{
 			ref.TransferType = storagemarket.TTManual
 		}
 
-		isVerified := false
+		// Check if the address is a verified client
+		dcap, err := nodeapi.StateVerifiedClientStatus(ctx, a, types.EmptyTSK)
+		if err != nil {
+			return err
+		}
+
+		isVerified := dcap != nil
+
 		// If the user has explicitly set the --verified-deal flag
 		if cctx.IsSet("verified-deal") {
 			// If --verified-deal is true, but the address is not a verified
