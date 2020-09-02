@@ -6,11 +6,10 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
-	"errors"
-	"github.com/ipfs/go-graphsync/network"
-	"io"
+	"io/ioutil"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
+	mutils "github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
 	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
 	dtnet "github.com/filecoin-project/go-data-transfer/network"
@@ -24,22 +23,22 @@ import (
 	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/types"
-	bstore "github.com/filecoin-project/lotus/lib/blockstore"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
-	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
-	dss "github.com/ipfs/go-datastore/sync"
+	badger "github.com/ipfs/go-ds-badger2"
+	"github.com/ipfs/go-graphsync"
 	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
-	"github.com/ipld/go-ipld-prime"
-	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
+	gsnet "github.com/ipfs/go-graphsync/network"
+	"github.com/ipfs/go-graphsync/storeutil"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 )
@@ -52,49 +51,58 @@ type ClientNodeAdapter struct {
 }
 
 func InitRetrievalClient(h host.Host) (retrievalmarket.RetrievalClient, error) {
-	ds := dss.MutexWrap(datastore.NewMapDatastore())
-	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
+	ctx := context.Background()
+	tdir, err := ioutil.TempDir("", "retrieval-client")
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := badger.NewDatastore(tdir, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	mds, err := multistore.NewMultiDstore(ds)
 	if err != nil {
 		return nil, err
 	}
 
-	storedCounter := storedcounter.New(ds, datastore.NewKey("counter"))
+	clientBs := mutils.NewClientBlockStore(mds, ds)
 
-	makeLoader := func(bs bstore.Blockstore) ipld.Loader {
-		return func(lnk ipld.Link, lnkCtx ipld.LinkContext) (io.Reader, error) {
-			c, ok := lnk.(cidlink.Link)
-			if !ok {
-				return nil, errors.New("incorrect Link Type")
-			}
-			// read block from one store
-			block, err := bs.Get(c.Cid)
-			if err != nil {
-				return nil, err
-			}
-			return bytes.NewReader(block.RawData()), nil
-		}
+	loader := storeutil.LoaderForBlockstore(clientBs)
+	storer := storeutil.StorerForBlockstore(clientBs)
+	graphSyncNetwork := gsnet.NewFromLibp2pHost(h)
+
+	chainBs, err := mutils.NewChainBlockStore(ds)
+	if err != nil {
+		return nil, err
 	}
 
-	makeStorer := func(bs bstore.Blockstore) ipld.Storer {
-		return func(lnkCtx ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
-			var buf bytes.Buffer
-			var committer ipld.StoreCommitter = func(lnk ipld.Link) error {
-				c, ok := lnk.(cidlink.Link)
-				if !ok {
-					return errors.New("incorrect Link Type")
-				}
-				block, err := blocks.NewBlockWithCid(buf.Bytes(), c.Cid)
-				if err != nil {
-					return err
-				}
-				return bs.Put(block)
-			}
-			return &buf, committer, nil
-		}
-	}
+	graphSync := graphsyncimpl.New(ctx, graphSyncNetwork, loader, storer, graphsyncimpl.RejectAllRequestsByDefault())
+	chainLoader := storeutil.LoaderForBlockstore(chainBs)
+	chainStorer := storeutil.StorerForBlockstore(chainBs)
 
-	graphSync := graphsyncimpl.New(context.Background(), network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	err = graphSync.RegisterPersistenceOption("chainstore", chainLoader, chainStorer)
+	if err != nil {
+		return nil, err
+	}
+	graphSync.RegisterIncomingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.IncomingRequestHookActions) {
+		_, has := requestData.Extension("chainsync")
+		if has {
+			// TODO: we should confirm the selector is a reasonable one before we validate
+			// TODO: this code will get more complicated and should probably not live here eventually
+			hookActions.ValidateRequest()
+			hookActions.UsePersistenceOption("chainstore")
+		}
+	})
+	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
+		_, has := requestData.Extension("chainsync")
+		if has {
+			hookActions.UsePersistenceOption("chainstore")
+		}
+	})
+
+	storedCounter := storedcounter.New(ds, datastore.NewKey("/datatransfer/client/counter"))
 	transport := dtgstransport.NewTransport(h.ID(), graphSync)
 	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
 	if err != nil {
