@@ -6,19 +6,18 @@ package storageadapter
 import (
 	"bytes"
 	"context"
-	"errors"
-	"github.com/filecoin-project/lotus/lib/sigs"
-	logging "github.com/ipfs/go-log/v2"
-	"io"
+	"io/ioutil"
 	"time"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
+	mutils "github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
 	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
 	dtnet "github.com/filecoin-project/go-data-transfer/network"
 	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
+	"github.com/filecoin-project/go-data-transfer/transport/graphsync/extension"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
@@ -31,10 +30,11 @@ import (
 	"github.com/filecoin-project/lotus/chain/events"
 	"github.com/filecoin-project/lotus/chain/events/state"
 	"github.com/filecoin-project/lotus/chain/types"
-	bstore "github.com/filecoin-project/lotus/lib/blockstore"
+	"github.com/filecoin-project/lotus/lib/sigs"
 	_ "github.com/filecoin-project/lotus/lib/sigs/bls"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/markets/utils"
+	"github.com/filecoin-project/lotus/node/modules"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin"
@@ -43,16 +43,17 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
-	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
-	dss "github.com/ipfs/go-datastore/sync"
+	badger "github.com/ipfs/go-ds-badger2"
+	"github.com/ipfs/go-graphsync"
 	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
-	"github.com/ipfs/go-graphsync/network"
-	"github.com/ipld/go-ipld-prime"
-	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
+	gsnet "github.com/ipfs/go-graphsync/network"
+	"github.com/ipfs/go-graphsync/storeutil"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"golang.org/x/xerrors"
 )
 
@@ -87,64 +88,83 @@ type StorageClientInfo struct {
 }
 
 func InitStorageClient(h host.Host) (storagemarket.StorageClient, *StorageClientInfo, error) {
-	ds := dss.MutexWrap(datastore.NewMapDatastore())
-	bs := bstore.NewBlockstore(namespace.Wrap(ds, datastore.NewKey("blockstore")))
+	ctx := context.Background()
+	tdir, err := ioutil.TempDir("", "storage-client")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ds, err := badger.NewDatastore(tdir, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	mds, err := multistore.NewMultiDstore(ds)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	scn := NewStorageClientNode()
+	clientBs := mutils.NewClientBlockStore(mds, ds)
 
-	clientDealFunds, err := funds.NewDealFunds(ds, datastore.NewKey("storage/client/dealfunds"))
+	loader := storeutil.LoaderForBlockstore(clientBs)
+	storer := storeutil.StorerForBlockstore(clientBs)
+	graphSyncNetwork := gsnet.NewFromLibp2pHost(h)
+
+	chainBs, err := mutils.NewChainBlockStore(ds)
 	if err != nil {
 		return nil, nil, err
 	}
+	graphSync := graphsyncimpl.New(ctx, graphSyncNetwork, loader, storer, graphsyncimpl.RejectAllRequestsByDefault())
+	chainLoader := storeutil.LoaderForBlockstore(chainBs)
+	chainStorer := storeutil.StorerForBlockstore(chainBs)
 
-	storedCounter := storedcounter.New(ds, datastore.NewKey("counter"))
-
-	makeLoader := func(bs bstore.Blockstore) ipld.Loader {
-		return func(lnk ipld.Link, lnkCtx ipld.LinkContext) (io.Reader, error) {
-			c, ok := lnk.(cidlink.Link)
-			if !ok {
-				return nil, errors.New("incorrect Link Type")
-			}
-			// read block from one store
-			block, err := bs.Get(c.Cid)
-			if err != nil {
-				return nil, err
-			}
-			return bytes.NewReader(block.RawData()), nil
-		}
+	err = graphSync.RegisterPersistenceOption("chainstore", chainLoader, chainStorer)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	makeStorer := func(bs bstore.Blockstore) ipld.Storer {
-		return func(lnkCtx ipld.LinkContext) (io.Writer, ipld.StoreCommitter, error) {
-			var buf bytes.Buffer
-			var committer ipld.StoreCommitter = func(lnk ipld.Link) error {
-				c, ok := lnk.(cidlink.Link)
-				if !ok {
-					return errors.New("incorrect Link Type")
-				}
-				block, err := blocks.NewBlockWithCid(buf.Bytes(), c.Cid)
-				if err != nil {
-					return err
-				}
-				return bs.Put(block)
-			}
-			return &buf, committer, nil
+	graphSync.RegisterIncomingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.IncomingRequestHookActions) {
+		_, has := requestData.Extension("chainsync")
+		if has {
+			// TODO: we should confirm the selector is a reasonable one before we validate
+			// TODO: this code will get more complicated and should probably not live here eventually
+			hookActions.ValidateRequest()
+			hookActions.UsePersistenceOption("chainstore")
 		}
-	}
+		_, has = requestData.Extension(extension.ExtensionDataTransfer)
+		if has {
+			hookActions.ValidateRequest()
+		}
+	})
+	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
+		_, has := requestData.Extension("chainsync")
+		if has {
+			hookActions.UsePersistenceOption("chainstore")
+		}
+	})
 
-	graphSync := graphsyncimpl.New(context.Background(), network.NewFromLibp2pHost(h), makeLoader(bs), makeStorer(bs))
+	sc := storedcounter.New(ds, datastore.NewKey("/datatransfer/client/counter"))
+	net := dtnet.NewFromLibp2pHost(h)
+
+	dtDs := namespace.Wrap(ds, datastore.NewKey("/datatransfer/client/transfers"))
 	transport := dtgstransport.NewTransport(h.ID(), graphSync)
-	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
+	dt, err := dtimpl.NewDataTransfer(dtDs, net, transport, sc)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	peerResolver := discovery.NewLocal(ds)
-	storageClient, err := StorageClient(h, bs, mds, dt, peerResolver, ds, scn, clientDealFunds)
+	if err := dt.Start(ctx); err != nil {
+		return nil, nil, err
+	}
+
+	clientDealFunds, err := modules.NewClientDealFunds(ds)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	peerResolver := modules.NewLocalDiscovery(ds)
+	clientDataStore := modules.NewClientDatastore(ds)
+	storageClient, err := StorageClient(h, clientBs, mds, dt, peerResolver, clientDataStore, scn, clientDealFunds)
 	if err != nil {
 		return nil, nil, err
 	}

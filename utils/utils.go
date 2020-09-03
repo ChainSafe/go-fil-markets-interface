@@ -2,6 +2,12 @@ package utils
 
 import (
 	"context"
+	bstore "github.com/filecoin-project/lotus/lib/blockstore"
+	"github.com/filecoin-project/lotus/node/modules/dtypes"
+	"github.com/filecoin-project/lotus/node/repo/importmgr"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/namespace"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	logging "github.com/ipfs/go-log/v2"
 	"net/http"
 	"os"
@@ -39,4 +45,19 @@ func ReqContext(cctx *cli.Context) context.Context {
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
 	return ctx
+}
+
+func NewClientBlockStore(mds dtypes.ClientMultiDstore, ds dtypes.MetadataDS) dtypes.ChainBlockstore {
+	imgr := importmgr.New(mds, namespace.Wrap(ds, datastore.NewKey("/client")))
+	return bstore.WrapIDStore(imgr.Blockstore)
+}
+
+func NewChainBlockStore(ds dtypes.MetadataDS) (dtypes.ChainBlockstore, error) {
+	bs := blockstore.NewBlockstore(ds)
+	cbs, err := blockstore.CachedBlockstore(context.Background(), bs, blockstore.DefaultCacheOpts())
+	if err != nil {
+		return nil, err
+	}
+
+	return cbs, nil
 }
