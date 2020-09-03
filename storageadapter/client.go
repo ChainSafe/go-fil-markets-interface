@@ -17,6 +17,7 @@ import (
 	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
 	dtnet "github.com/filecoin-project/go-data-transfer/network"
 	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
+	"github.com/filecoin-project/go-data-transfer/transport/graphsync/extension"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
@@ -129,6 +130,10 @@ func InitStorageClient(h host.Host) (storagemarket.StorageClient, *StorageClient
 			// TODO: this code will get more complicated and should probably not live here eventually
 			hookActions.ValidateRequest()
 			hookActions.UsePersistenceOption("chainstore")
+		}
+		_, has = requestData.Extension(extension.ExtensionDataTransfer)
+		if has {
+			hookActions.ValidateRequest()
 		}
 	})
 	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
