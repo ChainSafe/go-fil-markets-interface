@@ -5,6 +5,7 @@ package nodeapi
 
 import (
 	"context"
+	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"net/http"
 
@@ -61,6 +62,7 @@ type StateAPI struct {
 	StateGetActor                     func(ctx context.Context, actor address.Address, tsk types.TipSetKey) (*types.Actor, error)
 	StateGetReceipt                   func(context.Context, cid.Cid, types.TipSetKey) (*types.MessageReceipt, error)
 	StateDealProviderCollateralBounds func(context.Context, abi.PaddedPieceSize, bool, types.TipSetKey) (api.DealCollateralBounds, error)
+	StateVerifiedClientStatus         func(ctx context.Context, addr address.Address, tsk types.TipSetKey) (*verifreg.DataCap, error)
 }
 
 type StateManagerAPI struct {

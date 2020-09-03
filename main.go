@@ -32,13 +32,18 @@ func main() {
 	log.Infof("Initialized node client")
 	nodeapi.NodeClient = nodeClient
 
-	storageClient, storageClientInfo, err := storageadapter.InitStorageClient()
+	host, err := nodeapi.NewLibP2PHost()
+	if err != nil {
+		log.Fatalf("Error while initializing LibP2P host: %s", err)
+	}
+
+	storageClient, storageClientInfo, err := storageadapter.InitStorageClient(host)
 	if err != nil {
 		log.Fatalf("Error while initializing storage client: %s", err)
 	}
 	log.Infof("Initialized storage market")
 
-	retrievalClient, err := retrievaladapter.InitRetrievalClient()
+	retrievalClient, err := retrievaladapter.InitRetrievalClient(host)
 	if err != nil {
 		log.Fatalf("Error while initializing retrieval client: %s", err)
 	}
