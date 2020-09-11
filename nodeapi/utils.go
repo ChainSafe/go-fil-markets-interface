@@ -5,10 +5,8 @@ package nodeapi
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
-	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 
@@ -48,21 +46,4 @@ func NewStorageProviderInfo(address address.Address, miner address.Address, sect
 		PeerID:     peer,
 		Addrs:      multiaddrs,
 	}
-}
-
-func NewLibP2PHost() (host.Host, error) {
-	ctx := context.Background()
-	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := []libp2p.Option{
-		libp2p.Identity(priv),
-		libp2p.DefaultTransports,
-		libp2p.DefaultMuxers,
-		libp2p.DefaultSecurity,
-		libp2p.NATPortMap(),
-	}
-	return libp2p.New(ctx, opts...)
 }

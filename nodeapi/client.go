@@ -85,6 +85,8 @@ type UtilsAPI struct {
 	StateMarketStorageDeal func(ctx context.Context, dealID abi.DealID, ts types.TipSetKey) (*api.MarketDeal, error)
 	StateMinerInfo         func(ctx context.Context, addr address.Address, ts types.TipSetKey) (api.MinerInfo, error)
 	NetFindPeer            func(context.Context, peer.ID) (peer.AddrInfo, error)
+	ClientFindData         func(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error)
+	ClientRetrieve         func(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error
 }
 
 type Node struct {
