@@ -40,7 +40,7 @@ import (
 
 var log = logging.Logger("utils")
 
-type MarketClientParams struct {
+type MarketParams struct {
 	Host         host.Host
 	Cbs          dtypes.ClientBlockstore
 	Ds           datastore.Batching
@@ -111,7 +111,7 @@ func NewLibP2PHost() (host.Host, error) {
 	return libp2p.New(ctx, opts...)
 }
 
-func InitClient() (*MarketClientParams, error) {
+func InitMarketParams() (*MarketParams, error) {
 	host, err := NewLibP2PHost()
 	if err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ func InitClient() (*MarketClientParams, error) {
 		return nil, err
 	}
 
-	return &MarketClientParams{
+	return &MarketParams{
 		Host:         host,
 		Cbs:          clientBs,
 		Ds:           ds,

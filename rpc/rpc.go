@@ -26,7 +26,7 @@ import (
 	"github.com/multiformats/go-multiaddr/net"
 )
 
-func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient, params *utils.MarketClientParams) error {
+func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient, params *utils.MarketParams) error {
 	rpcServer := jsonrpc.NewServer()
 
 	ds := dss.MutexWrap(datastore.NewMapDatastore())

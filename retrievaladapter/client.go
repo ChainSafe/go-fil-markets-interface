@@ -38,7 +38,7 @@ type ClientNodeAdapter struct {
 	nodeapi.State
 }
 
-func InitRetrievalClient(params *mutils.MarketClientParams) (retrievalmarket.RetrievalClient, error) {
+func InitRetrievalClient(params *mutils.MarketParams) (retrievalmarket.RetrievalClient, error) {
 	rcn := NewRetrievalClientNode()
 	retrievalClient, err := RetrievalClient(params.Host, params.Mds, params.DataTransfer, params.Discovery, params.Ds, rcn)
 	if err != nil {

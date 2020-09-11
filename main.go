@@ -37,7 +37,7 @@ func main() {
 	log.Infof("Initialized node client")
 	nodeapi.NodeClient = nodeClient
 
-	params, err := utils.InitClient()
+	params, err := utils.InitMarketParams()
 	if err != nil {
 		log.Fatalf("Error while initializing market client params: %s", err)
 	}

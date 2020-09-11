@@ -67,7 +67,7 @@ type clientApi struct {
 
 type ClientDealFunds funds.DealFunds
 
-func InitStorageClient(params *mutils.MarketClientParams) (storagemarket.StorageClient, error) {
+func InitStorageClient(params *mutils.MarketParams) (storagemarket.StorageClient, error) {
 	scn := NewStorageClientNode()
 	storageClient, err := StorageClient(params.Host, params.Cbs, params.Mds, params.DataTransfer,
 		params.Discovery, params.Deals, scn, params.DealFunds)
