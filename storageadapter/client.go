@@ -368,7 +368,16 @@ func (n *ClientNodeAdapter) WaitForMessage(ctx context.Context, mcid cid.Cid, on
 
 // SignsBytes signs the given data with the given address's private key
 func (n *ClientNodeAdapter) SignBytes(ctx context.Context, signer address.Address, b []byte) (*crypto.Signature, error) {
-	return nil, nil
+	signer, err := n.StateAccountKey(ctx, signer, types.EmptyTSK)
+	if err != nil {
+		return nil, err
+	}
+
+	localSignature, err := n.Wallet.Sign(ctx, signer, b)
+	if err != nil {
+		return nil, err
+	}
+	return localSignature, nil
 }
 
 // OnDealSectorCommitted waits for a deal's sector to be sealed and proved, indicating the deal is active
