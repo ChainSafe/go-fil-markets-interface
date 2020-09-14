@@ -5,6 +5,7 @@ package nodeapi
 
 import (
 	"context"
+
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/specs-actors/actors/abi"
@@ -33,14 +34,12 @@ func (c *Chain) ChainGetTipSetByHeight(ctx context.Context, e abi.ChainEpoch, ts
 	return NodeClient.ChainAPI.ChainGetTipSetByHeight(ctx, e, tsk)
 }
 
-type ApiBStore struct {
-	node Node
-}
+type ApiBStore struct{}
 
 func (a *ApiBStore) ChainReadObj(ctx context.Context, c cid.Cid) ([]byte, error) {
-	return a.node.ChainAPI.ChainReadObj(ctx, c)
+	return NodeClient.ChainAPI.ChainReadObj(ctx, c)
 }
 
 func (a *ApiBStore) ChainHasObj(ctx context.Context, c cid.Cid) (bool, error) {
-	return a.node.ChainAPI.ChainHasObj(ctx, c)
+	return NodeClient.ChainAPI.ChainHasObj(ctx, c)
 }
