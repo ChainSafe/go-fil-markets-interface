@@ -5,22 +5,27 @@ package main
 
 import (
 	"flag"
-	"github.com/ChainSafe/go-fil-markets-interface/config"
-	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
-	logging "github.com/ipfs/go-log/v2"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/ChainSafe/go-fil-markets-interface/config"
+	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/ChainSafe/go-fil-markets-interface/retrievaladapter"
 	"github.com/ChainSafe/go-fil-markets-interface/rpc"
 	"github.com/ChainSafe/go-fil-markets-interface/storageadapter"
+	"github.com/ChainSafe/go-fil-markets-interface/utils"
+	logging "github.com/ipfs/go-log/v2"
 )
 
 var log = logging.Logger("markets")
 
 func main() {
-	_ = logging.SetLogLevel("*", "INFO")
+	lvl, err := logging.LevelFromString("INFO")
+	if err != nil {
+		panic(err)
+	}
+	logging.SetAllLoggers(lvl)
 
 	flag.Parse()
 	config.Load("./config/config.json")
@@ -32,24 +37,24 @@ func main() {
 	log.Infof("Initialized node client")
 	nodeapi.NodeClient = nodeClient
 
-	host, err := nodeapi.NewLibP2PHost()
+	params, err := utils.InitMarketParams()
 	if err != nil {
-		log.Fatalf("Error while initializing LibP2P host: %s", err)
+		log.Fatalf("Error while initializing market client params: %s", err)
 	}
 
-	storageClient, storageClientInfo, err := storageadapter.InitStorageClient(host)
+	storageClient, err := storageadapter.InitStorageClient(params)
 	if err != nil {
 		log.Fatalf("Error while initializing storage client: %s", err)
 	}
 	log.Infof("Initialized storage market")
 
-	retrievalClient, err := retrievaladapter.InitRetrievalClient(host)
+	retrievalClient, err := retrievaladapter.InitRetrievalClient(params)
 	if err != nil {
 		log.Fatalf("Error while initializing retrieval client: %s", err)
 	}
 	log.Infof("Initialized retrieval market")
 
-	if err := rpc.Serve(storageClient, retrievalClient, storageClientInfo); err != nil {
+	if err := rpc.Serve(storageClient, retrievalClient, params); err != nil {
 		log.Fatalf("Error while setting up the server %s.", err)
 	}
 	log.Infof("Started serving Markets on %s", config.Api.Market.Addr)
@@ -73,6 +78,7 @@ func main() {
 				if err != nil {
 					log.Fatalf("Error while closing storage client %v", err)
 				}
+				_ = params.DataTransfer.Stop()
 				nodeCloser()
 			} else if sigCnt == 3 {
 				// Force Shutdown

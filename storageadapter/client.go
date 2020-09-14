@@ -6,7 +6,6 @@ package storageadapter
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"time"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
@@ -14,10 +13,6 @@ import (
 	"github.com/filecoin-project/go-address"
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
-	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
-	dtnet "github.com/filecoin-project/go-data-transfer/network"
-	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
-	"github.com/filecoin-project/go-data-transfer/transport/graphsync/extension"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
@@ -25,7 +20,6 @@ import (
 	"github.com/filecoin-project/go-fil-markets/storagemarket/impl/funds"
 	smnet "github.com/filecoin-project/go-fil-markets/storagemarket/network"
 	"github.com/filecoin-project/go-multistore"
-	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/events"
 	"github.com/filecoin-project/lotus/chain/events/state"
@@ -34,7 +28,6 @@ import (
 	_ "github.com/filecoin-project/lotus/lib/sigs/bls"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
 	"github.com/filecoin-project/lotus/markets/utils"
-	"github.com/filecoin-project/lotus/node/modules"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin"
@@ -44,16 +37,8 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/namespace"
-	badger "github.com/ipfs/go-ds-badger2"
-	"github.com/ipfs/go-graphsync"
-	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
-	gsnet "github.com/ipfs/go-graphsync/network"
-	"github.com/ipfs/go-graphsync/storeutil"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"golang.org/x/xerrors"
 )
 
@@ -82,93 +67,14 @@ type clientApi struct {
 
 type ClientDealFunds funds.DealFunds
 
-type StorageClientInfo struct {
-	DataTransfer dtypes.ClientDataTransfer
-	Host         host.Host
-}
-
-func InitStorageClient(h host.Host) (storagemarket.StorageClient, *StorageClientInfo, error) {
-	ctx := context.Background()
-	tdir, err := ioutil.TempDir("", "storage-client")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ds, err := badger.NewDatastore(tdir, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mds, err := multistore.NewMultiDstore(ds)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func InitStorageClient(params *mutils.MarketParams) (storagemarket.StorageClient, error) {
 	scn := NewStorageClientNode()
-	clientBs := mutils.NewClientBlockStore(mds, ds)
-
-	loader := storeutil.LoaderForBlockstore(clientBs)
-	storer := storeutil.StorerForBlockstore(clientBs)
-	graphSyncNetwork := gsnet.NewFromLibp2pHost(h)
-
-	chainBs, err := mutils.NewChainBlockStore(ds)
+	storageClient, err := StorageClient(params.Host, params.Cbs, params.Mds, params.DataTransfer,
+		params.Discovery, params.Deals, scn, params.DealFunds)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	graphSync := graphsyncimpl.New(ctx, graphSyncNetwork, loader, storer, graphsyncimpl.RejectAllRequestsByDefault())
-	chainLoader := storeutil.LoaderForBlockstore(chainBs)
-	chainStorer := storeutil.StorerForBlockstore(chainBs)
-
-	err = graphSync.RegisterPersistenceOption("chainstore", chainLoader, chainStorer)
-	if err != nil {
-		return nil, nil, err
-	}
-	graphSync.RegisterIncomingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.IncomingRequestHookActions) {
-		_, has := requestData.Extension("chainsync")
-		if has {
-			// TODO: we should confirm the selector is a reasonable one before we validate
-			// TODO: this code will get more complicated and should probably not live here eventually
-			hookActions.ValidateRequest()
-			hookActions.UsePersistenceOption("chainstore")
-		}
-		_, has = requestData.Extension(extension.ExtensionDataTransfer)
-		if has {
-			hookActions.ValidateRequest()
-		}
-	})
-	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
-		_, has := requestData.Extension("chainsync")
-		if has {
-			hookActions.UsePersistenceOption("chainstore")
-		}
-	})
-
-	sc := storedcounter.New(ds, datastore.NewKey("/datatransfer/client/counter"))
-	net := dtnet.NewFromLibp2pHost(h)
-
-	dtDs := namespace.Wrap(ds, datastore.NewKey("/datatransfer/client/transfers"))
-	transport := dtgstransport.NewTransport(h.ID(), graphSync)
-	dt, err := dtimpl.NewDataTransfer(dtDs, net, transport, sc)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := dt.Start(ctx); err != nil {
-		return nil, nil, err
-	}
-
-	clientDealFunds, err := modules.NewClientDealFunds(ds)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	peerResolver := modules.NewLocalDiscovery(ds)
-	clientDataStore := modules.NewClientDatastore(ds)
-	storageClient, err := StorageClient(h, clientBs, mds, dt, peerResolver, clientDataStore, scn, clientDealFunds)
-	if err != nil {
-		return nil, nil, err
-	}
-	return storageClient, &StorageClientInfo{dt, h}, nil
+	return storageClient, nil
 }
 
 func StorageClient(h host.Host, ibs dtypes.ClientBlockstore, mds *multistore.MultiStore, dataTransfer datatransfer.Manager, discovery *discovery.Local, deals dtypes.ClientDatastore, scn storagemarket.StorageClientNode, dealFunds ClientDealFunds) (storagemarket.StorageClient, error) {

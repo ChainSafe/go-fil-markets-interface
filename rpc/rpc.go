@@ -5,9 +5,10 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/ChainSafe/go-fil-markets-interface/config"
-	"github.com/ChainSafe/go-fil-markets-interface/storageadapter"
 	"net/http"
+
+	"github.com/ChainSafe/go-fil-markets-interface/config"
+	"github.com/ChainSafe/go-fil-markets-interface/utils"
 
 	"github.com/ChainSafe/go-fil-markets-interface/api"
 	"github.com/ChainSafe/go-fil-markets-interface/auth"
@@ -25,7 +26,7 @@ import (
 	"github.com/multiformats/go-multiaddr/net"
 )
 
-func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient, storageClientInfo *storageadapter.StorageClientInfo) error {
+func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient, params *utils.MarketParams) error {
 	rpcServer := jsonrpc.NewServer()
 
 	ds := dss.MutexWrap(datastore.NewMapDatastore())
@@ -44,8 +45,8 @@ func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalm
 		CombinedBstore:    bs,
 		Imports:           importmgr.New(mds, namespace.Wrap(ds, datastore.NewKey("/client"))),
 		RetrievalStoreMgr: retrievalstoremgr.NewBlockstoreRetrievalStoreManager(bs),
-		Host:              storageClientInfo.Host,
-		DataTransfer:      storageClientInfo.DataTransfer,
+		Host:              params.Host,
+		DataTransfer:      params.DataTransfer,
 	})
 
 	ah := &auth.Handler{

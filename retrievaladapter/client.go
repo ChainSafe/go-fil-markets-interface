@@ -6,21 +6,14 @@ package retrievaladapter
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	mutils "github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
-	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
-	dtnet "github.com/filecoin-project/go-data-transfer/network"
-	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
-	"github.com/filecoin-project/go-data-transfer/transport/graphsync/extension"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	retrievalimpl "github.com/filecoin-project/go-fil-markets/retrievalmarket/impl"
 	rmnet "github.com/filecoin-project/go-fil-markets/retrievalmarket/network"
 	"github.com/filecoin-project/go-fil-markets/shared"
-	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-storedcounter"
 	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -33,13 +26,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
-	badger "github.com/ipfs/go-ds-badger2"
-	"github.com/ipfs/go-graphsync"
-	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
-	gsnet "github.com/ipfs/go-graphsync/network"
-	"github.com/ipfs/go-graphsync/storeutil"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"golang.org/x/xerrors"
 )
@@ -51,72 +38,9 @@ type ClientNodeAdapter struct {
 	nodeapi.State
 }
 
-func InitRetrievalClient(h host.Host) (retrievalmarket.RetrievalClient, error) {
-	ctx := context.Background()
-	tdir, err := ioutil.TempDir("", "retrieval-client")
-	if err != nil {
-		return nil, err
-	}
-
-	ds, err := badger.NewDatastore(tdir, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	mds, err := multistore.NewMultiDstore(ds)
-	if err != nil {
-		return nil, err
-	}
-
-	clientBs := mutils.NewClientBlockStore(mds, ds)
-
-	loader := storeutil.LoaderForBlockstore(clientBs)
-	storer := storeutil.StorerForBlockstore(clientBs)
-	graphSyncNetwork := gsnet.NewFromLibp2pHost(h)
-
-	chainBs, err := mutils.NewChainBlockStore(ds)
-	if err != nil {
-		return nil, err
-	}
-
-	graphSync := graphsyncimpl.New(ctx, graphSyncNetwork, loader, storer, graphsyncimpl.RejectAllRequestsByDefault())
-	chainLoader := storeutil.LoaderForBlockstore(chainBs)
-	chainStorer := storeutil.StorerForBlockstore(chainBs)
-
-	err = graphSync.RegisterPersistenceOption("chainstore", chainLoader, chainStorer)
-	if err != nil {
-		return nil, err
-	}
-	graphSync.RegisterIncomingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.IncomingRequestHookActions) {
-		_, has := requestData.Extension("chainsync")
-		if has {
-			// TODO: we should confirm the selector is a reasonable one before we validate
-			// TODO: this code will get more complicated and should probably not live here eventually
-			hookActions.ValidateRequest()
-			hookActions.UsePersistenceOption("chainstore")
-		}
-		_, has = requestData.Extension(extension.ExtensionDataTransfer)
-		if has {
-			hookActions.ValidateRequest()
-		}
-	})
-	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
-		_, has := requestData.Extension("chainsync")
-		if has {
-			hookActions.UsePersistenceOption("chainstore")
-		}
-	})
-
-	storedCounter := storedcounter.New(ds, datastore.NewKey("/datatransfer/client/counter"))
-	transport := dtgstransport.NewTransport(h.ID(), graphSync)
-	dt, err := dtimpl.NewDataTransfer(ds, dtnet.NewFromLibp2pHost(h), transport, storedCounter)
-	if err != nil {
-		return nil, err
-	}
-
-	peerResolver := discovery.NewLocal(ds)
+func InitRetrievalClient(params *mutils.MarketParams) (retrievalmarket.RetrievalClient, error) {
 	rcn := NewRetrievalClientNode()
-	retrievalClient, err := RetrievalClient(h, mds, dt, peerResolver, ds, rcn)
+	retrievalClient, err := RetrievalClient(params.Host, params.Mds, params.DataTransfer, params.Discovery, params.Ds, rcn)
 	if err != nil {
 		return nil, err
 	}
