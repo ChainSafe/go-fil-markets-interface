@@ -17,10 +17,8 @@ import (
 	"github.com/filecoin-project/go-fil-markets/storagemarket/impl/funds"
 	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-storedcounter"
-	bstore "github.com/filecoin-project/lotus/lib/blockstore"
 	"github.com/filecoin-project/lotus/node/modules"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
-	"github.com/filecoin-project/lotus/node/repo/importmgr"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	badger "github.com/ipfs/go-ds-badger2"
@@ -43,8 +41,8 @@ var log = logging.Logger("utils")
 type MarketParams struct {
 	Host         host.Host
 	Cbs          dtypes.ClientBlockstore
-	Ds           datastore.Batching
-	Mds          *multistore.MultiStore
+	Ds           dtypes.MetadataDS
+	Mds          dtypes.ClientMultiDstore
 	DataTransfer datatransfer.Manager
 	Discovery    *discovery.Local
 	Deals        dtypes.ClientDatastore
@@ -77,11 +75,6 @@ func ReqContext(cctx *cli.Context) context.Context {
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
 	return ctx
-}
-
-func NewClientBlockStore(mds dtypes.ClientMultiDstore, ds dtypes.MetadataDS) dtypes.ChainBlockstore {
-	imgr := importmgr.New(mds, namespace.Wrap(ds, datastore.NewKey("/client")))
-	return bstore.WrapIDStore(imgr.Blockstore)
 }
 
 func NewChainBlockStore(ds dtypes.MetadataDS) (dtypes.ChainBlockstore, error) {
@@ -133,7 +126,8 @@ func InitMarketParams() (*MarketParams, error) {
 		return nil, err
 	}
 
-	clientBs := NewClientBlockStore(mds, ds)
+	imgr := modules.ClientImportMgr(mds, namespace.Wrap(ds, datastore.NewKey("/client")))
+	clientBs := modules.ClientBlockstore(imgr)
 
 	loader := storeutil.LoaderForBlockstore(clientBs)
 	storer := storeutil.StorerForBlockstore(clientBs)

@@ -22,7 +22,7 @@ get-lint:
 	fi;
 
 lint: get-lint submodule
-	./bin/golangci-lint run ./... --timeout 5m0s -v --new-from-rev origin/master
+	./bin/golangci-lint run ./... --timeout 5m0s -v --new-from-rev origin/main
 
 test: submodule
 	go test ./...
