@@ -6,6 +6,9 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
@@ -44,8 +47,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	mh "github.com/multiformats/go-multihash"
 	"golang.org/x/xerrors"
-	"io"
-	"os"
 )
 
 var DefaultHashFunction = uint64(mh.BLAKE2B_MIN + 31)
