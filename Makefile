@@ -1,5 +1,6 @@
 PROJECTNAME=$(shell basename "$(PWD)")
 GOLANGCI := $(GOPATH)/bin/golangci-lint
+LOTUS_DIR=extern/lotus
 
 .PHONY: help lint test
 all: help
@@ -15,6 +16,10 @@ FFI_PATH:=./extern/filecoin-ffi/
 submodule:
 	git submodule update --init --recursive
 	make -C extern/filecoin-ffi
+	git -C $(LOTUS_DIR) reset HEAD --hard
+	git -C $(LOTUS_DIR) checkout v0.5.4
+	make -C $(LOTUS_DIR) clean
+	make -C $(LOTUS_DIR) 2k
 
 get-lint:
 	if [ ! -f ./bin/golangci-lint ]; then \
@@ -26,6 +31,10 @@ lint: get-lint submodule
 
 test: submodule
 	go test ./...
+
+storagetest: submodule
+	./run_lotus.sh &
+	./run_lotus_miner.sh &
 
 license:
 	./scripts/add_license.sh

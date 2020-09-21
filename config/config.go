@@ -27,6 +27,7 @@ type APIInfo struct {
 type API struct {
 	Node   *APIInfo
 	Market *APIInfo
+	Miner  *APIInfo
 }
 
 func (a *APIInfo) UnmarshalJSON(data []byte) error {
