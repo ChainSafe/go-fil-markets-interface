@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestMarketStorage(t *testing.T) {
+	t.Skip()
 	set := flag.NewFlagSet("test", 0)
 	cctx := cli.NewContext(nil, set, nil)
 
