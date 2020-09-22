@@ -7,13 +7,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	"github.com/ChainSafe/go-fil-markets-interface/config"
-
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/lotus/api"
@@ -21,8 +16,10 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
+	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/urfave/cli/v2"
 )
 
