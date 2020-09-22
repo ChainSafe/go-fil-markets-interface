@@ -6,9 +6,7 @@ NODE_PORT=1234
 MINER_PORT=2345
 MARKET_PORT=8888
 
-/ip4/127.0.0.1/tcp/$MARKET_PORT/ws
-
-LOTUS_NODE_ADDR=127.0.0.1:1234/rpc/v0
+LOTUS_NODE_ADDR=127.0.0.1:$NODE_PORT/rpc/v0
 while true
 do
     http_code=$(curl --output /dev/null -w ''%{http_code}'' --fail $LOTUS_NODE_ADDR --header 'Content-Type: application/json' --data-raw '{"jsonrpc": "2.0", "method": "Filecoin.Version", "params": [], "id": 1}')
@@ -20,7 +18,7 @@ do
     sleep 5
 done
 
-LOTUS_MINER_ADDR=127.0.0.1:2345/rpc/v0
+LOTUS_MINER_ADDR=127.0.0.1:$MINER_PORT/rpc/v0
 while true
 do
     http_code=$(curl --output /dev/null -w ''%{http_code}'' --fail $LOTUS_MINER_ADDR --header 'Content-Type: application/json' --data-raw '{"jsonrpc": "2.0", "method": "Filecoin.Version", "params": [], "id": 1}')
