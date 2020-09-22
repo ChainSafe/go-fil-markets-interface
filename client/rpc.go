@@ -39,11 +39,9 @@ type Market struct {
 }
 
 type Miner struct {
-	// Get the status of a given sector by ID
-	SectorsStatus func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error)
-
-	// List all staged sectors
-	SectorsList func(context.Context) ([]abi.SectorNumber, error)
+	SectorsStatus      func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error)
+	SectorsList        func(context.Context) ([]abi.SectorNumber, error)
+	SectorStartSealing func(context.Context, abi.SectorNumber) error
 }
 
 func NewMinerClient(addr string, requestHeader http.Header) (*Miner, jsonrpc.ClientCloser, error) {

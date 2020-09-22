@@ -35,6 +35,7 @@ test: submodule
 storagetest: submodule
 	./run_lotus.sh &
 	./run_lotus_miner.sh &
+	./run_market.sh &
 
 license:
 	./scripts/add_license.sh

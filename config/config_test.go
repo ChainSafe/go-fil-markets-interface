@@ -1,10 +1,10 @@
 package config
 
 import (
-	"github.com/multiformats/go-multiaddr"
 	"os"
 	"testing"
 
+	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/require"
 )
 

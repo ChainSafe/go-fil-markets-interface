@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	storagemarket "github.com/filecoin-project/go-fil-markets/storagemarket"
 	lapi "github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
+	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
@@ -41,17 +43,29 @@ func TestMain(m *testing.M) {
 }
 
 func TestMarketStorage(t *testing.T) {
-	t.Skip()
 	set := flag.NewFlagSet("test", 0)
 	cctx := cli.NewContext(nil, set, nil)
 
 	nodeapi, nodeCloser, err := nodeapi.GetNodeAPI(cctx)
-	require.NoError(t, err)
+	if err != nil {
+		fmt.Println("Stopping test: Make sure lotus node is up before running this test.")
+		return
+	}
 	defer nodeCloser()
 
-	api, closer, err := client.GetMarketAPI(cctx)
-	require.NoError(t, err)
-	defer closer()
+	api, marketCloser, err := client.GetMarketAPI(cctx)
+	if err != nil {
+		fmt.Println("Stopping test: Make sure go-fil-markets is up before running this test.")
+		return
+	}
+	defer marketCloser()
+
+	mapi, minerCloser, err := client.GetMinerAPI(cctx)
+	if err != nil {
+		fmt.Println("Stopping test: Make sure lotus miner is up before running this test.")
+		return
+	}
+	defer minerCloser()
 
 	ctx := utils.ReqContext(cctx)
 
@@ -105,11 +119,20 @@ func TestMarketStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Deal ID: ", encoder.Encode(*proposal))
+	for {
+		di, err := api.ClientGetDealInfo(ctx, *proposal)
+		require.NoError(t, err)
+		if di.State == storagemarket.StorageDealSealing {
+			dim, _ := json.MarshalIndent(di, "", "  ")
+			fmt.Println("Deal Info: ", string(dim))
+			break
+		}
+		fmt.Printf("Waiting for Deal ID %s to reach sealing state.\n", encoder.Encode(*proposal))
+		time.Sleep(10 * time.Second)
+	}
 
-	mapi, closer, err := client.GetMinerAPI(cctx)
-	require.NoError(t, err)
-	defer closer()
-
+	fmt.Println("Sealing the sector")
+	time.Sleep(10 * time.Second)
 	for {
 		sector, err := mapi.SectorsList(ctx)
 		require.NoError(t, err)
@@ -119,9 +142,15 @@ func TestMarketStorage(t *testing.T) {
 		for _, sNum := range sector {
 			sInfo, err := mapi.SectorsStatus(ctx, sNum, false)
 			require.NoError(t, err)
-			if sInfo.State != "proving" {
+
+			if sInfo.State == lapi.SectorState(sealing.WaitDeals) {
+				require.NoError(t, mapi.SectorStartSealing(ctx, sNum))
+			}
+
+			if sInfo.State != lapi.SectorState(sealing.Proving) {
 				sealed = false
-				time.Sleep(5)
+				fmt.Println("Waiting for sector ", sNum)
+				time.Sleep(10 * time.Second)
 			}
 		}
 

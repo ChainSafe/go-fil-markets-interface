@@ -5,9 +5,10 @@ package nodeapi
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"net/http"
 
 	"github.com/ChainSafe/go-fil-markets-interface/config"
 
@@ -87,6 +88,7 @@ type UtilsAPI struct {
 	NetFindPeer            func(context.Context, peer.ID) (peer.AddrInfo, error)
 	ClientFindData         func(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error)
 	ClientRetrieve         func(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error
+	Version                func(ctx context.Context) (api.Version, error)
 }
 
 type Node struct {
