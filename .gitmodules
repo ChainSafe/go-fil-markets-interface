@@ -3,4 +3,4 @@
 	url = https://github.com/filecoin-project/filecoin-ffi.git
 [submodule "extern/lotus"]
 	path = extern/lotus
-	url = git@github.com:filecoin-project/lotus.git
+	url = https://github.com/filecoin-project/lotus.git
