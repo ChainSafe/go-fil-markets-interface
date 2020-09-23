@@ -31,8 +31,18 @@ done
 LOTUS_BIN=./extern/lotus/lotus
 NODE_TOKEN=$($LOTUS_BIN auth create-token --perm admin)
 
+if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
+    echo $NODE_TOKEN
+    exit 1
+fi
+
 LOTUS_MINER_BIN=./extern/lotus/lotus-miner
 MINER_TOKEN=$($LOTUS_MINER_BIN auth create-token --perm admin)
+
+if [[ "$MINER_TOKEN" =~ "ERROR" ]]; then
+    echo $MINER_TOKEN
+    exit 1
+fi
 
 export NODE_API_INFO=$NODE_TOKEN:/ip4/127.0.0.1/tcp/$NODE_PORT/ws
 export MARKET_API_INFO=$NODE_TOKEN:/ip4/127.0.0.1/tcp/$MARKET_PORT/ws
