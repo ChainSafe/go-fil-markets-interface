@@ -26,6 +26,9 @@ func TestGetAPIInfo(t *testing.T) {
 	err = os.Setenv(marketAPIInfo, testVal)
 	require.NoError(t, err)
 
+	err = os.Setenv(minerAPIInfo, testVal)
+	require.NoError(t, err)
+
 	result, err := GetAPIInfo()
 	require.NoError(t, err)
 
@@ -40,6 +43,7 @@ func TestGetAPIInfo(t *testing.T) {
 	expected := API{
 		Node:   info,
 		Market: info,
+		Miner:  info,
 	}
 	require.Equal(t, expected, result)
 
