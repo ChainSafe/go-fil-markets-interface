@@ -1,6 +1,7 @@
 PROJECTNAME=$(shell basename "$(PWD)")
 GOLANGCI := $(GOPATH)/bin/golangci-lint
 LOTUS_DIR=extern/lotus
+FFI_DIR=extern/filecoin-ffi
 
 .PHONY: help lint test
 all: help
@@ -15,9 +16,13 @@ FFI_PATH:=./extern/filecoin-ffi/
 
 submodule:
 	git submodule update --init --recursive
-	make -C extern/filecoin-ffi
+	git -C $(FFI_DIR) reset HEAD --hard
+	git -C $(FFI_DIR) checkout cddc566
+	git -C $(FFI_DIR) clean -fdx
+	make -C $(FFI_DIR)
 	git -C $(LOTUS_DIR) reset HEAD --hard
 	git -C $(LOTUS_DIR) checkout v0.5.4
+	git -C $(LOTUS_DIR) clean -fdx
 	make -C $(LOTUS_DIR) clean
 	make -C $(LOTUS_DIR) 2k
 
