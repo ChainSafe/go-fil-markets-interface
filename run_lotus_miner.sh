@@ -2,7 +2,7 @@
 
 set -o xtrace
 
-function cleanup() {
+function cleanup {
     rm -rf ~/.lotusminer
     # Preserve the lotus miner logs
 }

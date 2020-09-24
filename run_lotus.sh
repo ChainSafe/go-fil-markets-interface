@@ -4,7 +4,7 @@ set -o xtrace
 
 LOTUS_DIR=./extern/lotus
 
-function cleanup() {
+function cleanup {
     rm -rf ~/.lotus ~/.genesis-sector
     rm localnet.json devgen.car
     # Preserve the lotus node logs
