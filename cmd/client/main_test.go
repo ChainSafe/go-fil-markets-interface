@@ -4,11 +4,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -23,6 +25,7 @@ import (
 	"github.com/filecoin-project/lotus/chain/types"
 	sealing "github.com/filecoin-project/lotus/extern/storage-sealing"
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
@@ -161,4 +164,61 @@ func TestMarketStorage(t *testing.T) {
 			break
 		}
 	}
+}
+
+func TestMarketRetrieval(t *testing.T) {
+	set := flag.NewFlagSet("test", 0)
+	cctx := cli.NewContext(nil, set, nil)
+
+	nodeapi, nodeCloser, err := nodeapi.GetNodeAPI(cctx)
+	if err != nil {
+		fmt.Println("Stopping test: Make sure lotus node is up before running this test.")
+		return
+	}
+	defer nodeCloser()
+
+	payer, err := nodeapi.WalletAPI.WalletDefaultAddress(context.TODO())
+	require.Nil(t, err)
+
+	mapi, marketCloser, err := client.GetMarketAPI(cctx)
+	if err != nil {
+		fmt.Println("Stopping test: Make sure go-fil-markets is up before running this test.")
+		return
+	}
+	defer marketCloser()
+
+	ctx := utils.ReqContext(cctx)
+
+	file, err := cid.Parse("bafkqavcimvwgy3zak5xxe3defyqfk4dmn5qwi2lom4qhi2djomqgm2lmmuqg63ramzuwyzldn5uw4lqkifzgkidzn52saylcnrssa5dpebzgk5dsnfsxmzjanf2ca4tfnvxxizlmpe7qu")
+	require.NoError(t, err)
+
+	offers, err := mapi.ClientFindData(ctx, file, nil)
+
+	var cleaned []lapi.QueryOffer
+	// filter out offers that errored
+	for _, o := range offers {
+		if o.Err == "" {
+			cleaned = append(cleaned, o)
+		}
+	}
+	offers = cleaned
+
+	// sort by price low to high
+	sort.Slice(offers, func(i, j int) bool {
+		return offers[i].MinPrice.LessThan(offers[j].MinPrice)
+	})
+	require.NoError(t, err)
+	require.Greater(t, len(offers), 0)
+
+	offer := offers[0]
+
+	maxPrice := types.FromFil(DefaultMaxRetrievePrice)
+	require.False(t, offer.MinPrice.GreaterThan(maxPrice))
+	ref := &lapi.FileRef{
+		Path:  "hello_retrieve.txt",
+		IsCAR: false,
+	}
+
+	err = mapi.ClientRetrieve(ctx, offer.Order(payer), ref)
+	require.NoError(t, err)
 }
