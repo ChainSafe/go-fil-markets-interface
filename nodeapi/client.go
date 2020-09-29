@@ -5,14 +5,10 @@ package nodeapi
 
 import (
 	"context"
-	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"net/http"
 
 	"github.com/ChainSafe/go-fil-markets-interface/config"
-
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/lotus/api"
@@ -20,8 +16,10 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
+	"github.com/filecoin-project/specs-actors/actors/builtin/verifreg"
 	"github.com/filecoin-project/specs-actors/actors/crypto"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/urfave/cli/v2"
 )
 
@@ -87,6 +85,7 @@ type UtilsAPI struct {
 	NetFindPeer            func(context.Context, peer.ID) (peer.AddrInfo, error)
 	ClientFindData         func(ctx context.Context, root cid.Cid, piece *cid.Cid) ([]api.QueryOffer, error)
 	ClientRetrieve         func(ctx context.Context, order api.RetrievalOrder, ref *api.FileRef) error
+	Version                func(ctx context.Context) (api.Version, error)
 }
 
 type Node struct {

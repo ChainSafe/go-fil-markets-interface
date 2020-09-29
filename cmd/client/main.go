@@ -1,15 +1,19 @@
+// Copyright 2020 ChainSafe Systems
+// SPDX-License-Identifier: Apache-2.0, MIT
+
 package main
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	tm "github.com/buger/goterm"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"text/tabwriter"
+
+	tm "github.com/buger/goterm"
 
 	"github.com/ChainSafe/go-fil-markets-interface/client"
 	"github.com/ChainSafe/go-fil-markets-interface/config"
@@ -17,7 +21,6 @@ import (
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
-	"github.com/filecoin-project/lotus/api"
 	lapi "github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
 	lcli "github.com/filecoin-project/lotus/cli"
@@ -768,12 +771,12 @@ var clientRetrieveCmd = &cli.Command{
 			pieceCid = &parsed
 		}
 
-		var offer api.QueryOffer
+		var offer lapi.QueryOffer
 		minerStrAddr := cctx.String("miner")
 		if minerStrAddr == "" { // Local discovery
 			offers, err := fapi.ClientFindData(ctx, file, pieceCid)
 
-			var cleaned []api.QueryOffer
+			var cleaned []lapi.QueryOffer
 			// filter out offers that errored
 			for _, o := range offers {
 				if o.Err == "" {

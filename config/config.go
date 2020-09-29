@@ -1,3 +1,6 @@
+// Copyright 2020 ChainSafe Systems
+// SPDX-License-Identifier: Apache-2.0, MIT
+
 package config
 
 import (
@@ -14,6 +17,7 @@ import (
 var (
 	nodeAPIInfo   = "NODE_API_INFO"
 	marketAPIInfo = "MARKET_API_INFO"
+	minerAPIInfo  = "MINER_API_INFO"
 	tokenKey      = "Token"
 	AddrKey       = "Addr"
 	Api           API // TODO(arijit): Remove it from global vars.
@@ -27,6 +31,7 @@ type APIInfo struct {
 type API struct {
 	Node   *APIInfo
 	Market *APIInfo
+	Miner  *APIInfo
 }
 
 func (a *APIInfo) UnmarshalJSON(data []byte) error {
@@ -79,7 +84,13 @@ func GetAPIInfo() (API, error) {
 		}
 	}
 
-	if api.Market == nil || api.Node == nil {
+	if val, ok := os.LookupEnv(minerAPIInfo); ok {
+		if api.Miner, err = parseEnv(val, minerAPIInfo); err != nil {
+			return API{}, err
+		}
+	}
+
+	if api.Market == nil || api.Node == nil || api.Miner == nil {
 		return API{}, fmt.Errorf("either %s or %s are set", nodeAPIInfo, marketAPIInfo)
 	}
 	return api, nil
@@ -115,5 +126,17 @@ func Load(configFile string) {
 	err = json.Unmarshal(file, &Api)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to unmarshall config from file : %v", err))
+	}
+}
+
+func (a *API) Store(configFile string) {
+	file, err := json.MarshalIndent(a, "", " ")
+	if err != nil {
+		panic(fmt.Sprintf("Unable to marshall config : %v", err))
+	}
+
+	err = ioutil.WriteFile(configFile, file, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("Unable to store config to file : %v", err))
 	}
 }

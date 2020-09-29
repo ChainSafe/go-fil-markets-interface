@@ -1,3 +1,6 @@
+// Copyright 2020 ChainSafe Systems
+// SPDX-License-Identifier: Apache-2.0, MIT
+
 package client
 
 import (
@@ -11,6 +14,7 @@ import (
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/lotus/api"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/urfave/cli/v2"
@@ -35,6 +39,30 @@ type Market struct {
 	ClientGenCar              func(ctx context.Context, ref api.FileRef, outputPath string) error
 	ClientListDataTransfers   func(ctx context.Context) ([]api.DataTransferChannel, error)
 	ClientDataTransferUpdates func(ctx context.Context) (<-chan api.DataTransferChannel, error)
+}
+
+type Miner struct {
+	SectorsStatus      func(ctx context.Context, sid abi.SectorNumber, showOnChainInfo bool) (api.SectorInfo, error)
+	SectorsList        func(context.Context) ([]abi.SectorNumber, error)
+	SectorStartSealing func(context.Context, abi.SectorNumber) error
+}
+
+func NewMinerClient(addr string, requestHeader http.Header) (*Miner, jsonrpc.ClientCloser, error) {
+	var miner Miner
+	closer, err := jsonrpc.NewMergeClient(context.Background(), addr, "Filecoin",
+		[]interface{}{
+			&miner,
+		},
+		requestHeader)
+	return &miner, closer, err
+}
+
+func GetMinerAPI(ctx *cli.Context) (*Miner, jsonrpc.ClientCloser, error) {
+	addr, err := config.Api.Miner.DialArgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewMinerClient(addr, utils.AuthHeader(string(config.Api.Miner.Token)))
 }
 
 func NewMarketClient(addr string, requestHeader http.Header) (*Market, jsonrpc.ClientCloser, error) {
