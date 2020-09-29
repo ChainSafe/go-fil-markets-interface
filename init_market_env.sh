@@ -28,7 +28,9 @@ do
     sleep 5
 done
 
-LOTUS_BIN=./extern/lotus/lotus
+LOTUS_DIR=${LOTUS_DIR:=./extern/lotus}
+
+LOTUS_BIN=$LOTUS_DIR/lotus
 NODE_TOKEN=$($LOTUS_BIN auth create-token --perm admin)
 
 if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
@@ -36,7 +38,7 @@ if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
     exit 1
 fi
 
-LOTUS_MINER_BIN=./extern/lotus/lotus-miner
+LOTUS_MINER_BIN=$LOTUS_DIR/lotus-miner
 MINER_TOKEN=$($LOTUS_MINER_BIN auth create-token --perm admin)
 
 if [[ "$MINER_TOKEN" =~ "ERROR" ]]; then

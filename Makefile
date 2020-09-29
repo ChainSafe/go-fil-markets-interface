@@ -20,11 +20,6 @@ submodule:
 	git -C $(FFI_DIR) checkout cddc566
 	git -C $(FFI_DIR) clean -fdx
 	make -C $(FFI_DIR)
-	git -C $(LOTUS_DIR) reset HEAD --hard
-	git -C $(LOTUS_DIR) checkout v0.5.4
-	git -C $(LOTUS_DIR) clean -fdx
-	make -C $(LOTUS_DIR) clean
-	make -C $(LOTUS_DIR) 2k
 
 get-lint:
 	if [ ! -f ./bin/golangci-lint ]; then \
@@ -36,11 +31,6 @@ lint: get-lint submodule
 
 test: submodule
 	go test ./...
-
-storagetest: submodule
-	./run_lotus.sh &
-	./run_lotus_miner.sh &
-	./run_market.sh &
 
 license:
 	./scripts/add_license.sh

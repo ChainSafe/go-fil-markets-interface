@@ -2,7 +2,7 @@
 
 set -o xtrace
 
-LOTUS_DIR=./extern/lotus
+LOTUS_DIR=${LOTUS_DIR:=./extern/lotus}
 
 function cleanup {
     rm -rf ~/.lotus ~/.genesis-sector
