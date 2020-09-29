@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 NODE_PORT=1234
 MINER_PORT=2345
