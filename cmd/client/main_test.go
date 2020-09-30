@@ -75,7 +75,7 @@ func TestMarketStorage(t *testing.T) {
 
 	ctx := utils.ReqContext(cctx)
 
-	absPath, err := filepath.Abs("../../data/hello_remote.txt")
+	absPath, err := filepath.Abs("/app/go-fil-markets/data/hello_remote.txt")
 	require.NoError(t, err)
 
 	ref := lapi.FileRef{

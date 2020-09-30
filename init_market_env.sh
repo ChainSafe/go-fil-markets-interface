@@ -4,7 +4,9 @@ NODE_PORT=1234
 MINER_PORT=2345
 MARKET_PORT=8888
 
-LOTUS_NODE_ADDR=127.0.0.1:$NODE_PORT/rpc/v0
+ENV_IP=${ENV_IP:=0.0.0.0}
+
+LOTUS_NODE_ADDR=$ENV_IP:$NODE_PORT/rpc/v0
 while true
 do
     http_code=$(curl --output /dev/null -w ''%{http_code}'' --fail $LOTUS_NODE_ADDR --header 'Content-Type: application/json' --data-raw '{"jsonrpc": "2.0", "method": "Filecoin.Version", "params": [], "id": 1}')
@@ -16,7 +18,7 @@ do
     sleep 5
 done
 
-LOTUS_MINER_ADDR=127.0.0.1:$MINER_PORT/rpc/v0
+LOTUS_MINER_ADDR=$ENV_IP:$MINER_PORT/rpc/v0
 while true
 do
     http_code=$(curl --output /dev/null -w ''%{http_code}'' --fail $LOTUS_MINER_ADDR --header 'Content-Type: application/json' --data-raw '{"jsonrpc": "2.0", "method": "Filecoin.Version", "params": [], "id": 1}')
@@ -34,18 +36,26 @@ LOTUS_BIN=$LOTUS_DIR/lotus
 NODE_TOKEN=$($LOTUS_BIN auth create-token --perm admin)
 
 if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
-    echo $NODE_TOKEN
+    echo "$NODE_TOKEN"
     exit 1
 fi
+
+NODE_API_INFO=$NODE_TOKEN:/ip4/$ENV_IP/tcp/$NODE_PORT/ws
+MARKET_API_INFO=$NODE_TOKEN:/ip4/$ENV_IP/tcp/$MARKET_PORT/ws
+
+echo "NODE_API_INFO=$NODE_API_INFO"
+export NODE_API_INFO=$NODE_API_INFO
+echo "MARKET_API_INFO=$MARKET_API_INFO"
+export MARKET_API_INFO=$MARKET_API_INFO
 
 LOTUS_MINER_BIN=$LOTUS_DIR/lotus-miner
 MINER_TOKEN=$($LOTUS_MINER_BIN auth create-token --perm admin)
 
 if [[ "$MINER_TOKEN" =~ "ERROR" ]]; then
-    echo $MINER_TOKEN
+    echo "$MINER_TOKEN"
     exit 1
 fi
 
-export NODE_API_INFO=$NODE_TOKEN:/ip4/127.0.0.1/tcp/$NODE_PORT/ws
-export MARKET_API_INFO=$NODE_TOKEN:/ip4/127.0.0.1/tcp/$MARKET_PORT/ws
-export MINER_API_INFO=$MINER_TOKEN:/ip4/127.0.0.1/tcp/$MINER_PORT/ws
+MINER_API_INFO=$MINER_TOKEN:/ip4/$ENV_IP/tcp/$MINER_PORT/ws
+echo "MINER_API_INFO=$MINER_API_INFO"
+export MINER_API_INFO=$MINER_API_INFO

@@ -4,10 +4,11 @@ RUN apt update -y
 RUN apt install -y mesa-opencl-icd ocl-icd-opencl-dev gcc git bzr jq pkg-config curl wget nano
 RUN apt upgrade -y
 
-RUN wget -c https://golang.org/dl/go1.14.6.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.14.6.linux-amd64.tar.gz
+RUN wget -c https://golang.org/dl/go1.14.9.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.14.9.linux-amd64.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 ENV LOTUS_SKIP_GENESIS_CHECK=_yes_
+ENV DOCKER=_yes_
 WORKDIR /app/lotus
 
 RUN git clone https://github.com/filecoin-project/lotus .

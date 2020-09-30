@@ -2,6 +2,9 @@
 
 make submodule
 
+cp /app/go-fil-markets/config/lotus/config.toml ~/lotus/config.toml
+cp /app/go-fil-markets/config/lotusminer/config.toml ~/lotusminer/config.toml
+
 # Start lotus node
 LOTUS_DIR=/app/lotus ./run_lotus.sh &
 
