@@ -30,6 +30,8 @@ while true; do
     sleep 5
 done
 
+make submodule
+
 # Run the test
 cd cmd/client
 go test -v -timeout 60m -run ^TestMarketStorage$
