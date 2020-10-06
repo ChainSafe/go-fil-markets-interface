@@ -3,8 +3,8 @@
 CONTAINER_NAME=go-fil-markets-e2e
 function cleanup {
     # Stop the docker container
-    docker stop $CONTAINER_NAME || true
-    docker container rm $CONTAINER_NAME || true
+    docker stop $CONTAINER_NAME 2> /dev/null || true
+    docker container rm $CONTAINER_NAME 2> /dev/null  || true
 }
 trap cleanup EXIT
 cleanup
