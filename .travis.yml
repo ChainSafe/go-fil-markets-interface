@@ -5,14 +5,27 @@ env:
   global:
     - GO111MODULE=on
 
+before_cache:
+  - >
+    mkdir -p $HOME/docker && docker images -a --filter='dangling=false' --format '{{.Repository}}:{{.Tag}} {{.ID}}'
+    | xargs -n 2 -t sh -c 'test -e $HOME/docker/$1.tar.gz || docker save $0 | gzip -2 > $HOME/docker/$1.tar.gz'
+
+before_install:
+  - if [[ -d $HOME/docker ]]; then ls $HOME/docker/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
+  - docker pull arijitad/go-fil-markets:latest
+
 cache:
   directories:
     - $HOME/.cache/go-build
     - $GOPATH/pkg/mod
+    - $HOME/docker
 
 install:
   - sudo apt-get install ocl-icd-opencl-dev
   - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+
+services:
+  - docker
 
 jobs:
   include:
@@ -26,3 +39,8 @@ jobs:
       name: "Test"
       script:
         - make test
+    - language: go
+      go: 1.14.x
+      name: "E2E Test"
+      script:
+        - ./run_docker_test.sh
