@@ -36,7 +36,7 @@ NODE_TOKEN=""
 if [ -z "$DOCKER" ]; then
     NODE_TOKEN=$($LOTUS_BIN auth create-token --perm admin)
 else
-    NODE_TOKEN=$(docker exec -it $CONTAINER_NAME /app/lotus/lotus auth create-token --perm admin | tr -d '\r')
+    NODE_TOKEN=$(docker exec $CONTAINER_NAME /app/lotus/lotus auth create-token --perm admin | tr -d '\r')
 fi
 
 if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
@@ -58,7 +58,7 @@ MINER_TOKEN=""
 if [ -z "$DOCKER" ]; then
     MINER_TOKEN=$($LOTUS_MINER_BIN auth create-token --perm admin)
 else
-    MINER_TOKEN=$(docker exec -it $CONTAINER_NAME /app/lotus/lotus-miner auth create-token --perm admin | tr -d '\r')
+    MINER_TOKEN=$(docker exec $CONTAINER_NAME /app/lotus/lotus-miner auth create-token --perm admin | tr -d '\r')
 fi
 
 if [[ "$MINER_TOKEN" =~ "ERROR" ]]; then
