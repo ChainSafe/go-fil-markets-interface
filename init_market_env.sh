@@ -40,6 +40,7 @@ else
 fi
 
 if [[ "$NODE_TOKEN" =~ "ERROR" ]]; then
+    echo "$NODE_TOKEN"
     exit 1
 fi
 
