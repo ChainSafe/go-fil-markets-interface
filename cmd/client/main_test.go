@@ -182,7 +182,7 @@ func TestMarketRetrieval(t *testing.T) {
 
 	mapi, marketCloser, err := client.GetMarketAPI(cctx)
 	if err != nil {
-		fmt.Println("Stopping test: Make sure go-fil-markets is up before running this test.")
+		fmt.Println("Stopping test: Make sure go-fil-market is up before running this test.")
 		return
 	}
 	defer marketCloser()
