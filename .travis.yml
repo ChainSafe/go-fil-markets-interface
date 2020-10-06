@@ -43,4 +43,4 @@ jobs:
       go: 1.14.x
       name: "E2E Test"
       script:
-        - ./run_docker_test.sh
+        - travis_wait 60 ./run_docker_test.sh
