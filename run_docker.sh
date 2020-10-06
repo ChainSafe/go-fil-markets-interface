@@ -33,6 +33,7 @@ done
 # Run the test
 cd cmd/client
 go test -v -timeout 60m -run ^TestMarketStorage$
+sleep 10s
 go test -v -timeout 60m -run ^TestMarketRetrieval$
 
 cleanup
