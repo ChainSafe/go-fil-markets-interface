@@ -219,6 +219,14 @@ func TestMarketRetrieval(t *testing.T) {
 		IsCAR: false,
 	}
 
-	err = mapi.ClientRetrieve(ctx, offer.Order(payer), ref)
+	retry := 0
+	for retry < 5 {
+		err = mapi.ClientRetrieve(ctx, offer.Order(payer), ref)
+		if err == nil {
+			break
+		}
+		retry++
+		fmt.Println("Retrying Retrieval: Attempt ", retry)
+	}
 	require.NoError(t, err)
 }
