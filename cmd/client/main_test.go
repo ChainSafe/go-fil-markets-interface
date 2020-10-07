@@ -75,7 +75,7 @@ func TestMarketStorage(t *testing.T) {
 
 	ctx := utils.ReqContext(cctx)
 
-	absPath, err := filepath.Abs("../../data/hello_remote.txt")
+	absPath, err := filepath.Abs("/app/go-fil-markets/data/hello_remote.txt")
 	require.NoError(t, err)
 
 	ref := lapi.FileRef{
@@ -182,7 +182,7 @@ func TestMarketRetrieval(t *testing.T) {
 
 	mapi, marketCloser, err := client.GetMarketAPI(cctx)
 	if err != nil {
-		fmt.Println("Stopping test: Make sure go-fil-markets is up before running this test.")
+		fmt.Println("Stopping test: Make sure go-fil-market is up before running this test.")
 		return
 	}
 	defer marketCloser()
@@ -219,6 +219,14 @@ func TestMarketRetrieval(t *testing.T) {
 		IsCAR: false,
 	}
 
-	err = mapi.ClientRetrieve(ctx, offer.Order(payer), ref)
+	retry := 0
+	for retry < 5 {
+		err = mapi.ClientRetrieve(ctx, offer.Order(payer), ref)
+		if err == nil {
+			break
+		}
+		retry++
+		fmt.Println("Retrying Retrieval: Attempt ", retry)
+	}
 	require.NoError(t, err)
 }

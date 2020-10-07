@@ -52,8 +52,8 @@ func main() {
 	defer span.End()
 
 	app := &cli.App{
-		Name:                 "go-fil-markets-impl",
-		Usage:                "Filecoin Market for storage and retrieval.",
+		Name:                 "go-fil-market-client",
+		Usage:                "CLI Client for Filecoin Market for storage and retrieval.",
 		Version:              "0.1",
 		EnableBashCompletion: true,
 		Commands:             cmds,

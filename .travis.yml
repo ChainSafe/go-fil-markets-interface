@@ -5,6 +5,9 @@ env:
   global:
     - GO111MODULE=on
 
+before_install:
+  - docker pull arijitad/go-fil-markets:latest
+
 cache:
   directories:
     - $HOME/.cache/go-build
@@ -13,6 +16,9 @@ cache:
 install:
   - sudo apt-get install ocl-icd-opencl-dev
   - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+
+services:
+  - docker
 
 jobs:
   include:
@@ -26,3 +32,8 @@ jobs:
       name: "Test"
       script:
         - make test
+    - language: go
+      go: 1.14.x
+      name: "E2E Test"
+      script:
+        - travis_wait 60 ./run_docker_test.sh

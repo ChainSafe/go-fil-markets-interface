@@ -18,7 +18,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 )
 
-var log = logging.Logger("markets")
+var log = logging.Logger("market")
 
 func main() {
 	lvl, err := logging.LevelFromString("INFO")

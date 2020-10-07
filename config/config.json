@@ -1,10 +1,14 @@
 {
   "Node" : {
     "Addr" : "/ip4/127.0.0.1/tcp/1234/ws",
-    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.i0fcD4TlFj9ZgS0BEHNdGm0RfCygYe-j4Zq_S-9Y8gI"
+    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.kYYX6e8qv1dePnL739A7PpuevnZ0rFQN_073SpmBlGo"
+  },
+  "Miner" : {
+    "Addr" : "/ip4/127.0.0.1/tcp/2345/ws",
+    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.RxRx0BVtUqWmTCsZUjNegeoeDJw5wxmCbEfMc2THMNU"
   },
   "Market" : {
     "Addr" : "/ip4/127.0.0.1/tcp/8888/ws",
-    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.i0fcD4TlFj9ZgS0BEHNdGm0RfCygYe-j4Zq_S-9Y8gI"
+    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiLCJzaWduIiwiYWRtaW4iXX0.kYYX6e8qv1dePnL739A7PpuevnZ0rFQN_073SpmBlGo"
   }
 }

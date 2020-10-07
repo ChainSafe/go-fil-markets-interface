@@ -71,7 +71,7 @@ type API struct {
 	Host              host.Host
 }
 
-var log = logging.Logger("markets")
+var log = logging.Logger("market")
 
 func calcDealExpiration(minDuration uint64, md *miner.DeadlineInfo, startEpoch abi.ChainEpoch) abi.ChainEpoch {
 	// Make sure we give some time for the miner to seal
