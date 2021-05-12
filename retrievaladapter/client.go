@@ -4,31 +4,30 @@
 package retrievaladapter
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	mutils "github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-fil-markets/discovery"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	retrievalimpl "github.com/filecoin-project/go-fil-markets/retrievalmarket/impl"
 	rmnet "github.com/filecoin-project/go-fil-markets/retrievalmarket/network"
 	"github.com/filecoin-project/go-fil-markets/shared"
+	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-storedcounter"
-	"github.com/filecoin-project/lotus/build"
 	"github.com/filecoin-project/lotus/chain/types"
 	marketevents "github.com/filecoin-project/lotus/markets/loggers"
+	"github.com/filecoin-project/lotus/markets/retrievaladapter"
+	"github.com/filecoin-project/lotus/node/impl/full"
+	payapi "github.com/filecoin-project/lotus/node/impl/paych"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	initactor "github.com/filecoin-project/specs-actors/actors/builtin/init"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
-	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/multiformats/go-multiaddr"
-	"golang.org/x/xerrors"
 )
 
 type ClientNodeAdapter struct {
@@ -47,7 +46,7 @@ func InitRetrievalClient(params *mutils.MarketParams) (retrievalmarket.Retrieval
 	return retrievalClient, err
 }
 
-func RetrievalClient(h host.Host, mds dtypes.ClientMultiDstore, dt dtypes.ClientDataTransfer, resolver retrievalmarket.PeerResolver, ds dtypes.MetadataDS, adapter retrievalmarket.RetrievalClientNode) (retrievalmarket.RetrievalClient, error) {
+func RetrievalClient(h host.Host, mds dtypes.ClientMultiDstore, dt dtypes.ClientDataTransfer, resolver discovery.PeerResolver, ds dtypes.MetadataDS, adapter retrievalmarket.RetrievalClientNode) (retrievalmarket.RetrievalClient, error) {
 	network := rmnet.NewFromLibp2pHost(h)
 	sc := storedcounter.New(ds, datastore.NewKey("/retr"))
 	client, err := retrievalimpl.NewClient(network, mds, dt, adapter, resolver, namespace.Wrap(ds, datastore.NewKey("/retrievals/client")), sc)
@@ -59,7 +58,25 @@ func RetrievalClient(h host.Host, mds dtypes.ClientMultiDstore, dt dtypes.Client
 }
 
 func NewRetrievalClientNode() retrievalmarket.RetrievalClientNode {
-	return &ClientNodeAdapter{}
+	return retrievaladapter.NewRetrievalClientNode(payapi.PaychAPI{}, full.ChainAPI{}, full.StateAPI{})
+}
+
+func (c *ClientNodeAdapter) WaitForPaymentChannelReady(ctx context.Context, waitSentinel cid.Cid) (address.Address, error) {
+	return c.PaymentManager.GetWaitReady(ctx, waitSentinel)
+}
+
+func (c *ClientNodeAdapter) CheckAvailableFunds(ctx context.Context, paymentChannel address.Address) (retrievalmarket.ChannelAvailableFunds, error) {
+	channelAvailableFunds, err := c.AvailableFunds(ctx, paymentChannel)
+	if err != nil {
+		return retrievalmarket.ChannelAvailableFunds{}, err
+	}
+	return retrievalmarket.ChannelAvailableFunds{
+		ConfirmedAmt:        channelAvailableFunds.ConfirmedAmt,
+		PendingAmt:          channelAvailableFunds.PendingAmt,
+		PendingWaitSentinel: channelAvailableFunds.PendingWaitSentinel,
+		QueuedAmt:           channelAvailableFunds.QueuedAmt,
+		VoucherReedeemedAmt: channelAvailableFunds.VoucherReedeemedAmt,
+	}, nil
 }
 
 func (c *ClientNodeAdapter) GetKnownAddresses(ctx context.Context, p retrievalmarket.RetrievalPeer, tok shared.TipSetToken) ([]multiaddr.Multiaddr, error) {
@@ -117,35 +134,4 @@ func (c *ClientNodeAdapter) CreatePaymentVoucher(ctx context.Context, paymentCha
 		return nil, err
 	}
 	return voucher, nil
-}
-
-// WaitForPaymentChannelAddFunds waits messageCID to appear on chain. If it doesn't appear within
-// defaultMsgWaitTimeout it returns error
-func (c *ClientNodeAdapter) WaitForPaymentChannelAddFunds(messageCID cid.Cid) error {
-	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
-
-	if err != nil {
-		return err
-	}
-	if mr.ExitCode != exitcode.Ok {
-		return xerrors.Errorf("wait for payment channel to add funds failed. exit code: %d", mr.ExitCode)
-	}
-	return nil
-}
-
-// WaitForPaymentChannelCreation waits for a message on chain with CID messageCID that a payment channel has been created.
-func (c *ClientNodeAdapter) WaitForPaymentChannelCreation(messageCID cid.Cid) (address.Address, error) {
-	_, mr, err := c.WaitForMessage(context.TODO(), messageCID, build.MessageConfidence)
-
-	if err != nil {
-		return address.Undef, err
-	}
-	if mr.ExitCode != exitcode.Ok {
-		return address.Undef, xerrors.Errorf("payment channel creation failed. exit code: %d", mr.ExitCode)
-	}
-	var retval initactor.ExecReturn
-	if err := retval.UnmarshalCBOR(bytes.NewReader(mr.Return)); err != nil {
-		return address.Undef, err
-	}
-	return retval.RobustAddress, nil
 }

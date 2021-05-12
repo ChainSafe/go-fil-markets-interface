@@ -5,20 +5,22 @@ package nodeapi
 
 import (
 	"context"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/specs-actors/actors/builtin/paych"
+	"github.com/ipfs/go-cid"
 )
 
 type PaymentManager struct{}
 
 func (pm *PaymentManager) GetPaych(ctx context.Context, from, to address.Address, ensureFree types.BigInt) (*api.ChannelInfo, error) {
-	return NodeClient.PaymentManagerAPI.PaychGet(ctx, from, to, ensureFree)
+	return NodeClient.PaymentManagerAPI.GetChannelInfo(ctx, from, to, ensureFree)
 }
 
 func (pm *PaymentManager) AllocateLane(ctx context.Context, ch address.Address) (uint64, error) {
-	return NodeClient.PaymentManagerAPI.PaychAllocateLane(ctx, ch)
+	return NodeClient.PaymentManagerAPI.AllocateLane(ctx, ch)
 }
 
 // PaychVoucherCreate creates a new signed voucher on the given payment channel
@@ -27,5 +29,13 @@ func (pm *PaymentManager) AllocateLane(ctx context.Context, ch address.Address) 
 // actual additional value of this voucher will only be the difference between
 // the two.
 func (pm *PaymentManager) PaychVoucherCreate(ctx context.Context, pch address.Address, amt types.BigInt, lane uint64) (*paych.SignedVoucher, error) {
-	return NodeClient.PaymentManagerAPI.PaychVoucherCreate(ctx, pch, amt, lane)
+	return NodeClient.PaymentManagerAPI.VoucherCreate(ctx, pch, amt, lane)
+}
+
+func (pm *PaymentManager) AvailableFunds(ctx context.Context, pch address.Address) (*api.ChannelAvailableFunds, error) {
+	return NodeClient.PaymentManagerAPI.AvailableFunds(ctx, pch)
+}
+
+func (pm *PaymentManager) GetWaitReady(ctx context.Context, waitSentinel cid.Cid) (address.Address, error) {
+	return NodeClient.PaymentManagerAPI.GetWaitReady(ctx, waitSentinel)
 }

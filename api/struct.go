@@ -4,6 +4,7 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -11,22 +12,24 @@ import (
 
 	"github.com/ChainSafe/go-fil-markets-interface/nodeapi"
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-commp-utils/ffiwrapper"
 	datatransfer "github.com/filecoin-project/go-data-transfer"
-	"github.com/filecoin-project/go-fil-markets/pieceio"
+	"github.com/filecoin-project/go-fil-markets/discovery"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	rm "github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-padreader"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/go-state-types/dline"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/build"
+	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
 	"github.com/filecoin-project/lotus/chain/types"
+	"github.com/filecoin-project/lotus/markets/utils"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/lotus/node/repo/importmgr"
-	"github.com/filecoin-project/sector-storage/ffiwrapper"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-cidutil"
@@ -60,7 +63,7 @@ type API struct {
 	nodeapi.PaymentManager
 
 	SMDealClient storagemarket.StorageClient
-	RetDiscovery rm.PeerResolver
+	RetDiscovery discovery.PeerResolver
 	Retrieval    rm.RetrievalClient
 
 	Imports dtypes.ClientImportMgr
@@ -73,12 +76,12 @@ type API struct {
 
 var log = logging.Logger("market")
 
-func calcDealExpiration(minDuration uint64, md *miner.DeadlineInfo, startEpoch abi.ChainEpoch) abi.ChainEpoch {
+func calcDealExpiration(minDuration uint64, md *dline.Info, startEpoch abi.ChainEpoch) abi.ChainEpoch {
 	// Make sure we give some time for the miner to seal
 	minExp := startEpoch + abi.ChainEpoch(minDuration)
 
 	// Align on miners ProvingPeriodBoundary
-	return minExp + miner.WPoStProvingPeriod - (minExp % miner.WPoStProvingPeriod) + (md.PeriodStart % miner.WPoStProvingPeriod) - 1
+	return minExp + md.WPoStProvingPeriod - (minExp % md.WPoStProvingPeriod) + (md.PeriodStart % md.WPoStProvingPeriod) - 1
 }
 
 func (a *API) imgr() *importmgr.Mgr {
@@ -108,7 +111,12 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 			}
 		}
 	}
-	exist, err := a.WalletHas(ctx, params.Wallet)
+	walletKey, err := a.StateAccountKey(ctx, params.Wallet, types.EmptyTSK)
+	if err != nil {
+		return nil, xerrors.Errorf("failed resolving params.Wallet addr: %w", params.Wallet)
+	}
+
+	exist, err := a.WalletHas(ctx, walletKey)
 	if err != nil {
 		return nil, xerrors.Errorf("failed getting addr from wallet: %w", params.Wallet)
 	}
@@ -126,16 +134,11 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 		return nil, xerrors.Errorf("failed getting miner's deadline info: %w", err)
 	}
 
-	rt, err := ffiwrapper.SealProofTypeFromSectorSize(mi.SectorSize)
-	if err != nil {
-		return nil, xerrors.Errorf("bad sector size: %w", err)
-	}
-
 	if uint64(params.Data.PieceSize.Padded()) > uint64(mi.SectorSize) {
 		return nil, xerrors.New("data doesn't fit in a sector")
 	}
 
-	providerInfo := nodeapi.NewStorageProviderInfo(params.Miner, mi.Worker, mi.SectorSize, *mi.PeerId, mi.Multiaddrs)
+	providerInfo := utils.NewStorageProviderInfo(params.Miner, mi.Worker, mi.SectorSize, *mi.PeerId, mi.Multiaddrs)
 
 	log.Infof("Starting the deal")
 	dealStart := params.DealStartEpoch
@@ -149,6 +152,16 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 		dealStart = ts.Height() + abi.ChainEpoch(dealStartBufferHours*blocksPerHour)
 	}
 
+	networkVersion, err := a.StateNetworkVersion(ctx, types.EmptyTSK)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to get network version: %w", err)
+	}
+
+	st, err := miner.PreferredSealProofTypeFromWindowPoStType(networkVersion, mi.WindowPoStProofType)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to get seal proof type: %w", err)
+	}
+
 	log.Infof("Proposing the deal")
 	result, err := a.SMDealClient.ProposeStorageDeal(ctx, storagemarket.ProposeStorageDealParams{
 		Addr:          params.Wallet,
@@ -158,7 +171,7 @@ func (a *API) ClientStartDeal(ctx context.Context, params *api.StartDealParams) 
 		EndEpoch:      calcDealExpiration(params.MinBlocksDuration, md, dealStart),
 		Price:         params.EpochPrice,
 		Collateral:    params.ProviderCollateral,
-		Rt:            rt,
+		Rt:            st,
 		FastRetrieval: params.FastRetrieval,
 		VerifiedDeal:  params.VerifiedDeal,
 		StoreID:       storeID,
@@ -524,7 +537,7 @@ func (a *API) ClientRetrieve(ctx context.Context, order api.RetrievalOrder, ref 
 	return files.WriteTo(file, ref.Path)
 }
 
-func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.SignedStorageAsk, error) {
+func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Address) (*storagemarket.StorageAsk, error) {
 	log.Infof("Querying miner ask")
 	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
 	if err != nil {
@@ -541,15 +554,7 @@ func (a *API) ClientQueryAsk(ctx context.Context, p peer.ID, miner address.Addre
 
 func (a *API) ClientCalcCommP(ctx context.Context, inpath string, miner address.Address) (*api.CommPRet, error) {
 	log.Infof("Calculating piece-cid")
-	mi, err := a.StateMinerInfo(ctx, miner, types.EmptyTSK)
-	if err != nil {
-		return nil, xerrors.Errorf("failed checking miners sector size: %w", err)
-	}
-
-	rt, err := ffiwrapper.SealProofTypeFromSectorSize(mi.SectorSize)
-	if err != nil {
-		return nil, xerrors.Errorf("bad sector size: %w", err)
-	}
+	arbitraryProofType := abi.RegisteredSealProof_StackedDrg32GiBV1_1
 
 	rdr, err := os.Open(inpath)
 	if err != nil {
@@ -562,7 +567,18 @@ func (a *API) ClientCalcCommP(ctx context.Context, inpath string, miner address.
 		return nil, err
 	}
 
-	commP, pieceSize, err := pieceio.GeneratePieceCommitment(rt, rdr, uint64(stat.Size()))
+	// check that the data is a car file; if it's not, retrieval won't work
+	_, _, err = car.ReadHeader(bufio.NewReader(rdr))
+	if err != nil {
+		return nil, xerrors.Errorf("not a car file: %w", err)
+	}
+
+	if _, err := rdr.Seek(0, io.SeekStart); err != nil {
+		return nil, xerrors.Errorf("seek to start: %w", err)
+	}
+
+	pieceReader, pieceSize := padreader.New(rdr, uint64(stat.Size()))
+	commP, err := ffiwrapper.GeneratePieceCIDFromFile(arbitraryProofType, pieceReader, pieceSize)
 
 	if err != nil {
 		return nil, xerrors.Errorf("computing commP failed: %w", err)
@@ -619,7 +635,7 @@ func (a *API) ClientGenCar(ctx context.Context, ref api.FileRef, outputPath stri
 
 	// TODO: does that defer mean to remove the whole blockstore?
 	defer bufferedDS.Remove(ctx, c) //nolint:errcheck
-	ssb := builder.NewSelectorSpecBuilder(basicnode.Style.Any)
+	ssb := builder.NewSelectorSpecBuilder(basicnode.Prototype.Any)
 
 	// entire DAG selector
 	allSelector := ssb.ExploreRecursive(selector.RecursionLimitNone(),

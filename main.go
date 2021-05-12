@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"os/signal"
@@ -78,7 +79,7 @@ func main() {
 				if err != nil {
 					log.Fatalf("Error while closing storage client %v", err)
 				}
-				_ = params.DataTransfer.Stop()
+				_ = params.DataTransfer.Stop(context.Background())
 				nodeCloser()
 			} else if sigCnt == 3 {
 				// Force Shutdown
