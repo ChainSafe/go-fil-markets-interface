@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -172,7 +171,15 @@ func InitMarketParams() (*MarketParams, error) {
 
 	// data-transfer push channel restart configuration
 	dtRestartConfig := dtimpl.PushChannelRestartConfig(time.Minute, 10, 1024, 10*time.Minute, 3)
-	dt, err := dtimpl.NewDataTransfer(dtDs, filepath.Join(chainDir, "data-transfer"), net, transport, sc, dtRestartConfig)
+
+	dtDir, err := ioutil.TempDir("", "data-transfer")
+	if err != nil {
+		return nil, err
+	}
+	dt, err := dtimpl.NewDataTransfer(dtDs, dtDir, net, transport, sc, dtRestartConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := dt.Start(ctx); err != nil {
 		return nil, err

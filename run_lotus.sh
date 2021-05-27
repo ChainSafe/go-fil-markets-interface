@@ -12,6 +12,8 @@ function cleanup {
 trap cleanup EXIT
 cleanup
 
+rm -rf "$LOTUS_PATH"
+
 export LOTUS_SKIP_GENESIS_CHECK=_yes_
 $LOTUS_DIR/lotus fetch-params 2048
 $LOTUS_DIR/lotus-seed pre-seal --sector-size 2KiB --num-sectors 2

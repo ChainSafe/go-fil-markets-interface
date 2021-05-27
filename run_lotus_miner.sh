@@ -9,6 +9,8 @@ function cleanup {
 trap cleanup EXIT
 cleanup
 
+rm -rf "$LOTUS_MINER_PATH"
+
 LOTUS_DIR=${LOTUS_DIR:=./extern/lotus}
 LOTUS_NODE_URL=0.0.0.0:1234/rpc/v0
 while true
