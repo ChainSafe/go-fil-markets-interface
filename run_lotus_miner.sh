@@ -31,7 +31,7 @@ then
     echo "Using default lotus config file"
 else
     echo "Using docker lotus config file"
-	mkdir ~/.lotusminer && cp /app/go-fil-markets/config/lotusminer/config.toml ~/.lotusminer/config.toml
+	mkdir ~/.lotusminer && cp /app/go-fil-markets/config/lotusminer/config.toml ~/.lotusminerDevnet/config.toml
 fi
 
 echo "Initializing lotus miner"

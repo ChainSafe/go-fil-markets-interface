@@ -25,7 +25,7 @@ then
     echo "Using default lotus config file"
 else
     echo "Using docker lotus config file"
-    mkdir ~/.lotus && cp /app/go-fil-markets/config/lotus/config.toml ~/.lotus/config.toml
+    mkdir ~/.lotus && cp /app/go-fil-markets/config/lotus/config.toml ~/.lotusDevnet/config.toml
 fi
 
 echo "Starting lotus daemon"
