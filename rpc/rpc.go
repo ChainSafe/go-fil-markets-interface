@@ -12,7 +12,6 @@ import (
 	"github.com/ChainSafe/go-fil-markets-interface/config"
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/lotus/node/modules"
@@ -22,7 +21,7 @@ import (
 func Serve(storageClient storagemarket.StorageClient, retrievalClient retrievalmarket.RetrievalClient, params *utils.MarketParams) error {
 	rpcServer := jsonrpc.NewServer()
 	marketAPI := &api.API{
-		RetDiscovery:   discovery.Multi(params.Discovery),
+		RetDiscovery:   params.Discovery,
 		SMDealClient:   storageClient,
 		Retrieval:      retrievalClient,
 		CombinedBstore: params.Cbs,

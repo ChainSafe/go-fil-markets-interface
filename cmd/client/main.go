@@ -21,11 +21,11 @@ import (
 	"github.com/ChainSafe/go-fil-markets-interface/utils"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
+	"github.com/filecoin-project/go-state-types/abi"
 	lapi "github.com/filecoin-project/lotus/api"
+	"github.com/filecoin-project/lotus/chain/actors/builtin/market"
 	"github.com/filecoin-project/lotus/chain/types"
 	lcli "github.com/filecoin-project/lotus/cli"
-	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/filecoin-project/specs-actors/actors/builtin/market"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-cidutil/cidenc"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -198,6 +198,10 @@ var clientDealCmd = &cli.Command{
 			Name:  "verified-deal",
 			Usage: "indicate that the deal counts towards verified client total",
 			Value: false,
+		},
+		&cli.StringFlag{
+			Name:  "provider-collateral",
+			Usage: "specify the requested provider collateral the miner should put up",
 		},
 		&CidBaseFlag,
 	},
@@ -917,6 +921,11 @@ var clientListTransfers = &cli.Command{
 	Usage: "List ongoing data transfers for deals",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
+			Name:    "verbose",
+			Aliases: []string{"v"},
+			Usage:   "print verbose transfer details",
+		},
+		&cli.BoolFlag{
 			Name:  "color",
 			Usage: "use color in display output",
 			Value: true,
@@ -928,6 +937,10 @@ var clientListTransfers = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "watch",
 			Usage: "watch deal updates in real-time, rather than a one time list",
+		},
+		&cli.BoolFlag{
+			Name:  "show-failed",
+			Usage: "show failed/cancelled transfers",
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -946,6 +959,8 @@ var clientListTransfers = &cli.Command{
 		completed := cctx.Bool("completed")
 		color := cctx.Bool("color")
 		watch := cctx.Bool("watch")
+		verbose := cctx.Bool("verbose")
+		showFailed := cctx.Bool("show-failed")
 
 		if watch {
 			channelUpdates, err := api.ClientDataTransferUpdates(ctx)
@@ -958,7 +973,7 @@ var clientListTransfers = &cli.Command{
 
 				tm.MoveCursor(1, 1)
 
-				lcli.OutputDataTransferChannels(tm.Screen, channels, completed, color)
+				lcli.OutputDataTransferChannels(tm.Screen, channels, verbose, completed, color, showFailed)
 
 				tm.Flush()
 
@@ -983,7 +998,7 @@ var clientListTransfers = &cli.Command{
 				}
 			}
 		}
-		lcli.OutputDataTransferChannels(os.Stdout, channels, completed, color)
+		lcli.OutputDataTransferChannels(os.Stdout, channels, verbose, completed, color, showFailed)
 		return nil
 	},
 }

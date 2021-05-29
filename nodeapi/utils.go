@@ -6,21 +6,16 @@ package nodeapi
 import (
 	"context"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/lotus/chain/actors/builtin/miner"
+	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/chain/types"
-	"github.com/filecoin-project/specs-actors/actors/abi"
 )
 
-func GetStorageDeal(ctx context.Context, client Node, dealID abi.DealID, ts *types.TipSet) (*api.MarketDeal, error) {
-	return NodeClient.UtilsAPI.StateMarketStorageDeal(ctx, dealID, ts.Key())
-}
-
-func StateMinerInfo(ctx context.Context, client Node, ts *types.TipSet, maddr address.Address) (api.MinerInfo, error) {
+func StateMinerInfo(ctx context.Context, ts *types.TipSet, maddr address.Address) (miner.MinerInfo, error) {
 	return NodeClient.UtilsAPI.StateMinerInfo(ctx, maddr, ts.Key())
 }
 

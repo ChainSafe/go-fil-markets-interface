@@ -10,18 +10,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	datatransfer "github.com/filecoin-project/go-data-transfer"
 	dtimpl "github.com/filecoin-project/go-data-transfer/impl"
 	dtnet "github.com/filecoin-project/go-data-transfer/network"
 	dtgstransport "github.com/filecoin-project/go-data-transfer/transport/graphsync"
-	"github.com/filecoin-project/go-data-transfer/transport/graphsync/extension"
-	"github.com/filecoin-project/go-fil-markets/retrievalmarket/discovery"
-	"github.com/filecoin-project/go-fil-markets/storagemarket/impl/funds"
+	discoveryimpl "github.com/filecoin-project/go-fil-markets/discovery/impl"
 	"github.com/filecoin-project/go-multistore"
 	"github.com/filecoin-project/go-storedcounter"
+	badgerbs "github.com/filecoin-project/lotus/blockstore/badger"
 	"github.com/filecoin-project/lotus/node/modules"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
+	"github.com/filecoin-project/lotus/node/repo"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	badger "github.com/ipfs/go-ds-badger2"
@@ -29,7 +30,6 @@ import (
 	graphsyncimpl "github.com/ipfs/go-graphsync/impl"
 	gsnet "github.com/ipfs/go-graphsync/network"
 	"github.com/ipfs/go-graphsync/storeutil"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -47,9 +47,8 @@ type MarketParams struct {
 	Ds           dtypes.MetadataDS
 	Mds          dtypes.ClientMultiDstore
 	DataTransfer datatransfer.Manager
-	Discovery    *discovery.Local
+	Discovery    *discoveryimpl.Local
 	Deals        dtypes.ClientDatastore
-	DealFunds    funds.DealFunds
 }
 
 func AuthHeader(token string) http.Header {
@@ -80,16 +79,6 @@ func ReqContext(cctx *cli.Context) context.Context {
 	return ctx
 }
 
-func NewChainBlockStore(ds dtypes.MetadataDS) (dtypes.ChainBlockstore, error) {
-	bs := blockstore.NewBlockstore(ds)
-	cbs, err := blockstore.CachedBlockstore(context.Background(), bs, blockstore.DefaultCacheOpts())
-	if err != nil {
-		return nil, err
-	}
-
-	return cbs, nil
-}
-
 func NewLibP2PHost() (host.Host, error) {
 	ctx := context.Background()
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
@@ -113,13 +102,12 @@ func InitMarketParams() (*MarketParams, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
-	tdir, err := ioutil.TempDir("", "market-client")
+	clientDir, err := ioutil.TempDir("", "client-ds")
 	if err != nil {
 		return nil, err
 	}
 
-	ds, err := badger.NewDatastore(tdir, nil)
+	ds, err := badger.NewDatastore(clientDir, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -136,11 +124,22 @@ func InitMarketParams() (*MarketParams, error) {
 	storer := storeutil.StorerForBlockstore(clientBs)
 	graphSyncNetwork := gsnet.NewFromLibp2pHost(host)
 
-	chainBs, err := NewChainBlockStore(ds)
+	chainDir, err := ioutil.TempDir("", "chain-ds")
 	if err != nil {
 		return nil, err
 	}
 
+	opts, err := repo.BadgerBlockstoreOptions(repo.HotBlockstore, chainDir, false)
+	if err != nil {
+		return nil, err
+	}
+
+	chainBs, err := badgerbs.Open(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
 	graphSync := graphsyncimpl.New(ctx, graphSyncNetwork, loader, storer, graphsyncimpl.RejectAllRequestsByDefault())
 	chainLoader := storeutil.LoaderForBlockstore(chainBs)
 	chainStorer := storeutil.StorerForBlockstore(chainBs)
@@ -153,17 +152,10 @@ func InitMarketParams() (*MarketParams, error) {
 	graphSync.RegisterIncomingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.IncomingRequestHookActions) {
 		_, has := requestData.Extension("chainsync")
 		if has {
-			// TODO: we should confirm the selector is a reasonable one before we validate
-			// TODO: this code will get more complicated and should probably not live here eventually
 			hookActions.ValidateRequest()
 			hookActions.UsePersistenceOption("chainstore")
 		}
-		_, has = requestData.Extension(extension.ExtensionDataTransfer)
-		if has {
-			hookActions.ValidateRequest()
-		}
 	})
-
 	graphSync.RegisterOutgoingRequestHook(func(p peer.ID, requestData graphsync.RequestData, hookActions graphsync.OutgoingRequestHookActions) {
 		_, has := requestData.Extension("chainsync")
 		if has {
@@ -176,7 +168,15 @@ func InitMarketParams() (*MarketParams, error) {
 
 	dtDs := namespace.Wrap(ds, datastore.NewKey("/datatransfer/client/transfers"))
 	transport := dtgstransport.NewTransport(host.ID(), graphSync)
-	dt, err := dtimpl.NewDataTransfer(dtDs, net, transport, sc)
+
+	// data-transfer push channel restart configuration
+	dtRestartConfig := dtimpl.PushChannelRestartConfig(time.Minute, 10, 1024, 10*time.Minute, 3)
+
+	dtDir, err := ioutil.TempDir("", "data-transfer")
+	if err != nil {
+		return nil, err
+	}
+	dt, err := dtimpl.NewDataTransfer(dtDs, dtDir, net, transport, sc, dtRestartConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func InitMarketParams() (*MarketParams, error) {
 		return nil, err
 	}
 
-	clientDealFunds, err := modules.NewClientDealFunds(ds)
+	local, err := discoveryimpl.NewLocal(namespace.Wrap(ds, datastore.NewKey("/deals/local")))
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +196,7 @@ func InitMarketParams() (*MarketParams, error) {
 		Ds:           ds,
 		Mds:          mds,
 		DataTransfer: dt,
-		Discovery:    modules.NewLocalDiscovery(ds),
+		Discovery:    local,
 		Deals:        modules.NewClientDatastore(ds),
-		DealFunds:    clientDealFunds,
 	}, nil
 }

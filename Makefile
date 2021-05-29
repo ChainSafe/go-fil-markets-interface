@@ -17,9 +17,9 @@ FFI_PATH:=./extern/filecoin-ffi/
 submodule:
 	git submodule update --init --recursive
 	git -C $(FFI_DIR) reset HEAD --hard
-	git -C $(FFI_DIR) checkout cddc566
+	git -C $(FFI_DIR) checkout dc4e4e8dc9554dedb6f48304f7f0c6328331f9ec
 	git -C $(FFI_DIR) clean -fdx
-	make -C $(FFI_DIR)
+	make -C $(FFI_DIR) cgo-gen
 
 get-lint:
 	if [ ! -f ./bin/golangci-lint ]; then \
