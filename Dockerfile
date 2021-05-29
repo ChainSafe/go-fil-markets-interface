@@ -11,8 +11,8 @@ ENV LOTUS_SKIP_GENESIS_CHECK=_yes_
 ENV DOCKER=_yes_
 ENV CGO_CFLAGS_ALLOW="-D__BLST_PORTABLE__"
 ENV CGO_CFLAGS="-D__BLST_PORTABLE__"
-ENV LOTUS_PATH=~/.lotusDevnet
-ENV LOTUS_MINER_PATH=~/.lotusminerDevnet
+ENV LOTUS_PATH=$HOME/.lotusDevnet
+ENV LOTUS_MINER_PATH=$HOME/.lotusminerDevnet
 WORKDIR /app/lotus
 
 RUN git clone https://github.com/filecoin-project/lotus .

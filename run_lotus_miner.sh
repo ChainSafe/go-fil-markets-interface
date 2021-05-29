@@ -2,16 +2,18 @@
 
 set -o xtrace
 
+if [ -z "$LOTUS_DIR" ]
+then
+    LOTUS_DIR=./extern/lotus
+fi
+
 function cleanup {
-    rm -rf ~/.lotusminer
+    rm -rf "$LOTUS_MINER_PATH"
     # Preserve the lotus miner logs
 }
 trap cleanup EXIT
 cleanup
 
-rm -rf "$LOTUS_MINER_PATH"
-
-LOTUS_DIR=${LOTUS_DIR:=./extern/lotus}
 LOTUS_NODE_URL=0.0.0.0:1234/rpc/v0
 while true
 do
@@ -31,7 +33,7 @@ then
     echo "Using default lotus config file"
 else
     echo "Using docker lotus config file"
-	mkdir ~/.lotusminer && cp /app/go-fil-markets/config/lotusminer/config.toml ~/.lotusminerDevnet/config.toml
+	mkdir -p "$LOTUS_MINER_PATH" && cp /app/go-fil-markets/config/lotusminer/config.toml "$LOTUS_MINER_PATH"/config.toml
 fi
 
 echo "Initializing lotus miner"

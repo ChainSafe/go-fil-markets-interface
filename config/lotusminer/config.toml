@@ -1,6 +1,6 @@
 [API]
   ListenAddress = "/ip4/0.0.0.0/tcp/2345/http"
-#  RemoteListenAddress = ""
+  RemoteListenAddress = "0.0.0.0:2345"
 #  Timeout = "30s"
 #
 [Libp2p]
